@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.2 - 2026-04-11
+
+### Added
+- Add `LogicalPlanner.parallel_plan` for generating multiple logical plans concurrently.
+- Document the logical planner's relationship to the Apex-SQL paper.
+
+### Changed
+- Move logical planner integration coverage under `tests/integration`.
+- Strengthen parallel logical planner test assertions.
+
 ## 0.1.1 - 2026-04-11
 
 ### Fixed

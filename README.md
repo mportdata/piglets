@@ -10,9 +10,11 @@ A modular, pre-1.0 library of text-to-SQL planning tools.
 
 ### Planning
 
-The first included primitive is a `LogicalPlanner` that turns a natural-language analytics question into an ordered list of abstract logical steps.
+The first included primitive is a `LogicalPlanner` that turns a natural-language analytics question into an ordered list of abstract logical steps. The logical planner is an implementation of the planner found in the Apex-SQL paper [here](https://arxiv.org/pdf/2602.16720).
 
-This keeps planning at the business-logic level before later schema grounding or SQL generation.
+The `LogicalPlanner` has a `plan` method and a `parallel_plan` method.
+
+Plan aggregation tools are coming soon.
 
 ### Pruning
 
