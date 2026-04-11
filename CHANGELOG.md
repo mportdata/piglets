@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.3 - 2026-04-11
+
+### Added
+- Add README installation and `LogicalPlanner.parallel_plan` usage examples.
+
+### Fixed
+- Correct README instructions for installing the `openai` optional dependency group.
+
 ## 0.1.2 - 2026-04-11
 
 ### Added
