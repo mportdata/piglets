@@ -9,6 +9,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
     steps:
       - name: Check out repo
@@ -26,13 +28,11 @@ jobs:
         run: uv sync --group test --all-extras
 
       - name: Run integration tests
-        if: ${{ secrets.OPENAI_API_KEY != '' }}
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        if: ${{ env.OPENAI_API_KEY != '' }}
         run: uv run pytest tests
 
       - name: Skip integration tests when no OpenAI key is configured
-        if: ${{ secrets.OPENAI_API_KEY == '' }}
+        if: ${{ env.OPENAI_API_KEY == '' }}
         run: echo "Skipping integration tests because OPENAI_API_KEY is not configured."
 
       - name: Build package
