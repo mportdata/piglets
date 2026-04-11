@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.1 - 2026-04-11
+
+### Fixed
+- Include `logical_planner.md` in packaged distributions so `LogicalPlanner` can load its prompt after installation from PyPI.
+
+### Changed
+- Run only unit tests in the publish workflow before building and publishing the package.
+
 ## 0.1.0 - 2026-04-11
 
 Initial public alpha release of `piglets`.
