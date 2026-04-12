@@ -8,6 +8,7 @@
 ### Changed
 - Use Pydantic models for logical planner structured outputs.
 - Return `LogicalPlan` and `LogicalPlans` model objects from planner APIs.
+- Combine the public planner API around `LogicalPlanner.plan(..., num_samples=...)`.
 
 ### Fixed
 - Replace unsupported `list[str]` structured-output schemas with a `LogicalSteps` schema.
