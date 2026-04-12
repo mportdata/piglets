@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.5 - 2026-04-12
+
+### Changed
+- Update `LogicalPlanner.plan()` to support multi-sample planning with `num_samples`.
+- Replace `parallel_plan()` documentation and tests with the unified `plan(..., num_samples=...)` API.
+
+### Fixed
+- Ensure multi-sample planning generates individual candidate plans before aggregating them.
+
 ## 0.1.4 - 2026-04-12
 
 ### Added
