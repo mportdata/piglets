@@ -40,23 +40,19 @@ from piglets import LogicalPlanner
 # initialise a logical planner
 logical_planner = LogicalPlanner('gpt-5.2')
 
-# generate 3 logical plans
-logical_plans = logical_planner.parallel_plan(
+# generate 3 logical plan samples and aggregate them
+logical_plan = logical_planner.plan(
     natural_language_query="What was the average number of piglets per week for Q4 2025?",
-    num_plans=3
+    num_samples=3,
 )
 
-# print each logical plan
-for i in range(len(logical_plans.logical_plans)):
-    print(f"Logical Plan {i + 1}: ")
-    steps = logical_plans.logical_plans[i].logical_steps
-    for j in range(len(steps)):
-        print(f"Step {j + 1}: ")
-        print(steps[j])
+# print the aggregated logical plan
+for i, step in enumerate(logical_plan.logical_steps):
+    print(f"Step {i + 1}: ")
+    print(step)
 ```
 
 ```
->>> Logical Plan 1:
 >>> Step 1:
 >>> 1. Identify all piglet birth (or piglet addition) events with their event dates and piglet counts.
 >>> Step 2:
@@ -72,9 +68,9 @@ for i in range(len(logical_plans.logical_plans)):
 
 The first included primitive is a `LogicalPlanner` that turns a natural-language analytics question into an ordered list of abstract logical steps. The logical planner is an implementation of the planner found in the Apex-SQL paper [here](https://arxiv.org/pdf/2602.16720).
 
-The `LogicalPlanner` has a `plan` method and a `parallel_plan` method.
+The `LogicalPlanner` has a `plan` method that can generate one plan or sample multiple plans and aggregate them with `num_samples`.
 
-Plan aggregation tools are coming soon.
+Plan aggregation is available through `LogicalPlans.aggregate()`.
 
 ### Pruning
 
