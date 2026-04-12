@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.4 - 2026-04-12
+
+### Added
+- Add `LogicalPlans.aggregate()` for combining multiple logical plan candidates into one plan.
+
+### Changed
+- Use Pydantic models for logical planner structured outputs.
+- Return `LogicalPlan` and `LogicalPlans` model objects from planner APIs.
+
+### Fixed
+- Replace unsupported `list[str]` structured-output schemas with a `LogicalSteps` schema.
+
 ## 0.1.3 - 2026-04-11
 
 ### Added
