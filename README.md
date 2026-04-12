@@ -1,6 +1,6 @@
 # 🐷 piglets
 
-A modular, pre-1.0 library of text-to-SQL planning tools.
+A modular library of text-to-SQL tools.
 
 ## Status
 
@@ -47,9 +47,9 @@ logical_plans = logical_planner.parallel_plan(
 )
 
 # print each logical plan
-for i in range(len(logical_plans)):
+for i in range(len(logical_plans.logical_plans)):
     print(f"Logical Plan {i + 1}: ")
-    steps = logical_plans[i]["logical_steps"]
+    steps = logical_plans.logical_plans[i].logical_steps
     for j in range(len(steps)):
         print(f"Step {j + 1}: ")
         print(steps[j])

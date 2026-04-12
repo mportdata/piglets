@@ -3,7 +3,7 @@ from pathlib import Path
 
 from langchain.chat_models import init_chat_model
 
-from piglets.types import LogicalPlan
+from piglets.types import LogicalPlan, LogicalPlans, LogicalSteps
 from piglets.utils import read_markdown_file
 
 
@@ -13,13 +13,19 @@ class LogicalPlanner():
         self.system_instruction = read_markdown_file(file_path=file_path)
 
         llm = init_chat_model(model_name)
-        llm = llm.with_structured_output(LogicalPlan)
-        self.llm = llm
+        self.llm = llm.with_structured_output(LogicalSteps)
 
     def plan(self, natural_language_query: str) -> LogicalPlan:
-        return self.llm.invoke(f"{self.system_instruction} \nUser question: {natural_language_query}")
+        logical_steps = self.llm.invoke(
+            f"{self.system_instruction} \nUser question: {natural_language_query}"
+        )
 
-    def parallel_plan(self, natural_language_query: str, num_plans: int = 5) -> list[LogicalPlan]:
+        return LogicalPlan(
+            natural_language_query=natural_language_query,
+            logical_steps=logical_steps.logical_steps,
+        )
+
+    def parallel_plan(self, natural_language_query: str, num_plans: int = 5) -> LogicalPlans:
         if num_plans < 1:
             raise ValueError("num_plans must be at least 1")
 
@@ -28,4 +34,8 @@ class LogicalPlanner():
                 executor.submit(self.plan, natural_language_query)
                 for _ in range(num_plans)
             ]
-            return [future.result() for future in futures]
+            logical_plans = LogicalPlans(
+                natural_language_query=natural_language_query,
+                logical_plans=[future.result() for future in futures],
+            )
+        return logical_plans
