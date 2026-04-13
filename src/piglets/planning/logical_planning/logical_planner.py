@@ -3,16 +3,17 @@ from pathlib import Path
 
 from langchain.chat_models import init_chat_model
 
-from piglets.types import LogicalPlan, LogicalPlans, LogicalSteps
+from piglets.types import AggregatePlan, LogicalPlan, LogicalPlans, LogicalSteps
 from piglets.utils import read_markdown_file
 
 
 class LogicalPlanner():
-    def __init__(self, model_name: str):
+    def __init__(self, model_name: str, model_provider: str = None):
         file_path = Path(__file__).with_suffix(".md").resolve()
         self.system_instruction = read_markdown_file(file_path=file_path)
         self.model_name = model_name
-        llm = init_chat_model(model_name)
+        llm = init_chat_model(model=model_name, model_provider=model_provider)
+        self.model_provider = model_provider
         self.llm = llm.with_structured_output(LogicalSteps)
 
     def _plan_once(self, natural_language_query: str) -> LogicalPlan:
@@ -40,7 +41,7 @@ class LogicalPlanner():
             )
         return logical_plans
 
-    def plan(self, natural_language_query: str, num_samples: int = 1) -> LogicalPlan:
+    def plan(self, natural_language_query: str, num_samples: int = 1) -> LogicalPlan | AggregatePlan:
         if num_samples < 1:
             raise ValueError("num_samples must be at least 1.")
         elif num_samples == 1:
@@ -52,4 +53,7 @@ class LogicalPlanner():
                 natural_language_query=natural_language_query,
                 num_samples=num_samples,
             )
-            return logical_plans.aggregate(model_name=self.model_name)
+            return logical_plans.aggregate(
+                model_name=self.model_name,
+                model_provider=self.model_provider,
+            )
