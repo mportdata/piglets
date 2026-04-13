@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.6 - 2026-04-13
+
+### Added
+- Add `AggregatePlan.sample_plans` so aggregated logical plans retain their source candidate plans.
+- Add optional dependency extras for additional LangChain model providers.
+
+### Changed
+- Thread `model_provider` through planner and aggregate model initialization.
+- Document provider extras and the `sample_plans` aggregate-plan attribute in the README.
+
 ## 0.1.5 - 2026-04-12
 
 ### Changed
