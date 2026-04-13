@@ -1,6 +1,6 @@
 import pytest
 
-from piglets import LogicalPlan, LogicalPlanner
+from piglets import AggregatePlan, LogicalPlan, LogicalPlanner
 
 
 @pytest.fixture
@@ -24,10 +24,16 @@ def test_multi_sample_logical_planner(natural_language_query, logical_planner):
         num_samples=num_samples,
     )
 
-    assert isinstance(logical_plan, LogicalPlan)
+    assert isinstance(logical_plan, AggregatePlan)
     assert logical_plan.natural_language_query == natural_language_query
     assert isinstance(logical_plan.logical_steps, list)
     assert all(
         isinstance(step, str)
         for step in logical_plan.logical_steps
+    )
+    assert isinstance(logical_plan.sample_plans, list)
+    assert len(logical_plan.sample_plans) == num_samples
+    assert all(
+        isinstance(plan, LogicalPlan)
+        for plan in logical_plan.sample_plans
     )

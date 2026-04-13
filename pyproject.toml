@@ -6,12 +6,87 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "langchain>=1.0",
-    "pydantic>=2",
+    "pydantic>=2.13.0",
 ]
 
 [project.optional-dependencies]
 openai = [
     "langchain-openai>=1.0",
+]
+anthropic = [
+    "langchain-anthropic>=1.0",
+]
+azure_openai = [
+    "langchain-openai>=1.0",
+]
+azure_ai = [
+    "langchain-azure-ai>=1.0",
+]
+google_vertexai = [
+    "langchain-google-vertexai>=3.2.2",
+]
+google_genai = [
+    "langchain-google-genai>=4.2.1",
+]
+anthropic_bedrock = [
+    "langchain-aws>=1.0",
+]
+bedrock = [
+    "langchain-aws>=1.0",
+]
+bedrock_converse = [
+    "langchain-aws>=1.0",
+]
+cohere = [
+    "langchain-cohere>=0.5.0",
+]
+fireworks = [
+    "langchain-fireworks>=1.0",
+]
+together = [
+    "langchain-together>=0.4.0",
+]
+mistralai = [
+    "langchain-mistralai>=1.0",
+]
+huggingface = [
+    "langchain-huggingface>=1.0",
+]
+groq = [
+    "langchain-groq>=1.0",
+]
+ollama = [
+    "langchain-ollama>=1.0",
+]
+google_anthropic_vertex = [
+    "langchain-google-vertexai>=3.2.2",
+]
+deepseek = [
+    "langchain-deepseek>=1.0",
+]
+ibm = [
+    "langchain-ibm>=1.0",
+]
+nvidia = [
+    "langchain-nvidia-ai-endpoints>=1.0",
+]
+xai = [
+    "langchain-xai>=1.0",
+]
+openrouter = [
+    "langchain-openrouter>=0.2.1",
+]
+perplexity = [
+    "langchain-perplexity>=1.0",
+]
+upstage = [
+    "langchain-upstage>=0.7.7",
+]
+baseten = [
+    "langchain-baseten>=0.2.0",
+]
+litellm = [
+    "langchain-litellm>=0.6.4",
 ]
 
 [dependency-groups]

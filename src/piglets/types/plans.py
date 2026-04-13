@@ -16,6 +16,14 @@ class LogicalPlan(BaseModel):
     natural_language_query: str
     logical_steps: list[str]
 
+class AggregatePlan(LogicalPlan):
+    """A logical plan that has been aggregated from multiple candidate plans."""
+
+    sample_plans: list[LogicalPlan] = Field(
+        default_factory=list,
+        description="The original sample plans that were aggregated to create this plan."
+    )
+
 
 class LogicalPlans(BaseModel):
     """A collection of logical plans for one natural language query."""
@@ -23,9 +31,9 @@ class LogicalPlans(BaseModel):
     natural_language_query: str
     logical_plans: list[LogicalPlan]
 
-    def aggregate(self, model_name: str) -> LogicalPlan:
+    def aggregate(self, model_name: str, model_provider: str = None) -> LogicalPlan:
         """Aggregate multiple logical plan candidates into a single logical plan."""
-        llm = init_chat_model(model_name)
+        llm = init_chat_model(model=model_name, model_provider=model_provider)
         llm = llm.with_structured_output(LogicalSteps)
         plans_text = "\n\n".join(
             f"Plan {i + 1}:\n" + "\n".join(plan.logical_steps)
@@ -56,7 +64,8 @@ class LogicalPlans(BaseModel):
 
         aggregate_steps = llm.invoke(plan_aggregator_prompt)
 
-        return LogicalPlan(
+        return AggregatePlan(
             natural_language_query=self.natural_language_query,
             logical_steps=aggregate_steps.logical_steps,
+            sample_plans=self.logical_plans,
         )
