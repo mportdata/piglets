@@ -7,9 +7,12 @@ requires-python = ">=3.10"
 dependencies = [
     "langchain>=1.0",
     "pydantic>=2.13.0",
+    "python-dotenv>=1.2.2",
+    "sqlalchemy>=2.0.49",
 ]
 
 [project.optional-dependencies]
+# langchain dependencies for various LLM providers.
 openai = [
     "langchain-openai>=1.0",
 ]
@@ -87,6 +90,10 @@ baseten = [
 ]
 litellm = [
     "langchain-litellm>=0.6.4",
+]
+# sqlalchemy dependencies for various database types.
+bigquery = [
+    "sqlalchemy-bigquery>=1.0.0",
 ]
 
 [dependency-groups]

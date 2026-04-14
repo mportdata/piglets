@@ -32,7 +32,18 @@ uv add "piglets[openai]"
 
 Other provider extras include `anthropic`, `google_genai`, `google_vertexai`, `bedrock`, `cohere`, `mistralai`, `groq`, `ollama`, and `openrouter`.
 
-### Example
+Install the optional dependency for the database backend you use. For BigQuery:
+
+**venv**
+```bash
+pip install "piglets[bigquery]"
+```
+**uv**
+```bash
+uv add "piglets[bigquery]"
+```
+
+### Logical planning
 
 Use `gpt-5.2` to generate 3 logical plans from a natural language query.
 
@@ -68,7 +79,42 @@ print(f"Aggregated from {len(logical_plan.sample_plans)} sample plans.")
 ...
 ```
 
+### Database connector
+
+Use `DatabaseConnector` to inspect a supported database and return a typed schema.
+
+```python
+from piglets import DatabaseConnector
+
+database_connector = DatabaseConnector(
+    database_type="bigquery",
+    database_name="my_bigquery_dataset",
+)
+
+database = database_connector.get_database_schema()
+
+print(database.name)
+for table in database.tables:
+    print(table.name)
+    for column in table.columns:
+        print(f"- {column.name} ({column.data_type})")
+```
+
+BigQuery connections use the `GOOGLE_CLOUD_PROJECT_ID` environment variable by default. You can also pass `gcp_project_id` directly:
+
+```python
+database_connector = DatabaseConnector(
+    database_type="bigquery",
+    database_name="my_bigquery_dataset",
+    gcp_project_id="my-gcp-project",
+)
+```
+
 ## Current scope
+
+### Database
+
+`DatabaseConnector` currently supports BigQuery. It connects to a database by `database_name` and returns a `Database` object containing `Table` and `Column` objects.
 
 ### Planning
 
