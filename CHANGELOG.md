@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.7 - 2026-04-14
+
+### Added
+- Add `DatabaseConnector` for inspecting BigQuery database schemas.
+- Add typed database schema models: `Database`, `Table`, and `Column`.
+- Add the `bigquery` optional dependency extra for installing BigQuery SQLAlchemy support.
+
+### Changed
+- Export `DatabaseConnector` from the root `piglets` package.
+- Document BigQuery connector installation, configuration, and schema inspection in the README.
+- Add `.env` to `.gitignore` for local database credentials and configuration.
+
 ## 0.1.6 - 2026-04-13
 
 ### Added
