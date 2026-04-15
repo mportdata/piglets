@@ -5,7 +5,11 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from piglets.types import LogicalSteps
+from piglets import (
+    DatabaseConnector, 
+    LogicalPlanner,
+    LogicalSteps
+)
 
 
 class FakeLLM:
@@ -37,3 +41,15 @@ def model_name() -> str:
 @pytest.fixture
 def natural_language_query() -> str:
     return "Which tags saw the largest increase in average answer score from 2022 to 2023, considering only questions with at least 5 answers?"
+
+@pytest.fixture
+def logical_planner(model_name) -> LogicalPlanner:
+    return LogicalPlanner(model_name)
+
+@pytest.fixture
+def bigquery_connector():
+    database_connector = DatabaseConnector(
+        database_type="bigquery",
+        database_name="stack_overflow",
+    )
+    return database_connector

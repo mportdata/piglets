@@ -16,6 +16,11 @@ class LogicalPlan(BaseModel):
     natural_language_query: str
     logical_steps: list[str]
 
+    def export_as_string(self) -> str:
+        """Export the logical plan as a compact, readable string."""
+        steps_text = "\n".join(step for step in self.logical_steps)
+        return f"Logical Plan for Query: {self.natural_language_query}\n{steps_text}"
+
 class AggregatePlan(LogicalPlan):
     """A logical plan that has been aggregated from multiple candidate plans."""
 

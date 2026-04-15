@@ -1,7 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
-from pathlib import Path
-
 from langchain.chat_models import init_chat_model
+from pathlib import Path
 
 from piglets.types import AggregatePlan, LogicalPlan, LogicalPlans, LogicalSteps
 from piglets.utils import read_markdown_file

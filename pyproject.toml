@@ -103,7 +103,8 @@ dev = [
 ]
 test = [
     "pytest>=8.0",
-    "langchain-openai>=1.0"
+    "langchain-openai>=1.0",
+    "sqlalchemy-bigquery>=1.0.0"
 ]
 
 [tool.setuptools]
