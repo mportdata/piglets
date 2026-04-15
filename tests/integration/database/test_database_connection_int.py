@@ -2,7 +2,6 @@ import pytest
 
 from piglets.types import Database, Column, Table
 
-pytest.importorskip("sqlalchemy")
 pytest.importorskip("sqlalchemy_bigquery")
 
 from piglets.database import DatabaseConnector
@@ -27,3 +26,10 @@ def test_bigquery_connector_get_database_schema(biquery_connector):
         assert all(isinstance(column, Column) for column in table.columns)
         assert all(isinstance(column.name, str) for column in table.columns)
         assert all(isinstance(column.data_type, str) for column in table.columns)
+
+def test_bigquery_connector_export_database_as_string(biquery_connector):
+    database_schema: Database = biquery_connector.get_database_schema()
+    database_string = database_schema.export_as_string()
+    print(database_string)
+    assert isinstance(database_string, str)
+    assert "Database: stack_overflow" in database_string

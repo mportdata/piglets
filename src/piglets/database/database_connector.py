@@ -1,16 +1,15 @@
 import os
-
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, inspect
 
 from piglets.types import Column, Database, Table
 
-load_dotenv()
-
 class DatabaseConnector():
     """Base class for database connectors."""
     def __init__(self, database_type: str, database_name: str, gcp_project_id: str = None):
         if database_type == "bigquery":
+
+            load_dotenv()
             google_cloud_project_id = os.getenv("GOOGLE_CLOUD_PROJECT_ID", None)
             if not gcp_project_id and not google_cloud_project_id:
                     raise ValueError("GCP project ID must be provided for BigQuery databases.")

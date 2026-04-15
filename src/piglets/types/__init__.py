@@ -9,6 +9,13 @@ from .database import (
     Database as Database,
     Table as Table,
 )
+from .pruning import (
+    DeletionColumns as DeletionColumns,
+    DeletionSet as DeletionSet,
+    PreservationColumns as PreservationColumns,
+    PreservationSet as PreservationSet,
+    PruningColumns as PruningColumns
+)
 
 __all__ = [
     # plan types
@@ -20,4 +27,10 @@ __all__ = [
     "Column",
     "Database",
     "Table",
+    # pruning types
+    "DeletionColumns",
+    "DeletionSet",
+    "PreservationColumns",
+    "PreservationSet",
+    "PruningColumns"
 ]
