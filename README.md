@@ -110,6 +110,37 @@ database_connector = DatabaseConnector(
 )
 ```
 
+### Dual-pathway pruning
+
+Use `Pruner` to reduce a database schema with both preservation and deletion signals. The preservation pathway selects tables and columns that look useful for the query. The deletion pathway removes tables and columns that look irrelevant. `dual_pathway_pruning()` combines both paths into a final `Database` schema.
+
+```python
+from piglets import DatabaseConnector, LogicalPlanner, Pruner
+
+question = "Which tags saw the largest increase in average answer score from 2022 to 2023, considering only questions with at least 5 answers?"
+
+logical_planner = LogicalPlanner("gpt-5.2")
+logical_plan = logical_planner.plan(
+    natural_language_query=question,
+    num_samples=3,
+)
+
+database_connector = DatabaseConnector(
+    database_type="bigquery",
+    database_name="stack_overflow",
+)
+database = database_connector.get_database_schema()
+
+pruner = Pruner(model_name="gpt-5.2")
+pruned_database = pruner.dual_pathway_pruning(
+    natural_language_query=question,
+    database=database,
+    logical_plan=logical_plan,
+)
+
+print(pruned_database.export_as_string())
+```
+
 ## Current scope
 
 ### Database
@@ -127,4 +158,4 @@ Aggregated plans include a `sample_plans` attribute containing the candidate `Lo
 
 ### Pruning
 
-Pruning components are planned but not included yet.
+`Pruner` supports preservation pruning, deletion pruning, and dual-pathway pruning. Preservation pruning returns a `PreservationSet` of useful tables and columns. Deletion pruning returns a `DeletionSet` of irrelevant tables and columns. Dual-pathway pruning combines both into a final pruned `Database`.

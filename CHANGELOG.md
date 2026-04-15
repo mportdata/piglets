@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.1.8 - 2026-04-15
+
+### Added
+- Add `Pruner` with positive preservation, negative deletion, and dual-pathway schema pruning flows.
+- Add pruning selection types: `PruningColumns`, `PreservationColumns`, `PreservationSet`, `DeletionColumns`, and `DeletionSet`.
+- Add `Database.subtract()`, `Database.union()`, and `Database.export_as_string()` helpers for composing pruned schemas.
+- Add `LogicalPlan.export_as_string()` for including compact plan context in pruning prompts.
+- Add integration coverage for preservation, deletion, and dual-pathway pruning.
+- Add unit coverage for database schema subtraction and union behavior.
+
+### Changed
+- Export pruning APIs from the root `piglets` package.
+- Document dual-pathway pruning in the README.
+- Add `sqlalchemy-bigquery` to the test dependency group used by BigQuery integration tests.
+
 ## 0.1.7 - 2026-04-14
 
 ### Added
