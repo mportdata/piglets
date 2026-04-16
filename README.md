@@ -149,7 +149,7 @@ print(pruned_database.export_as_string())
 
 ### Planning
 
-The first included primitive is a `LogicalPlanner` that turns a natural-language analytics question into an ordered list of abstract logical steps. The logical planner is an implementation of the planner found in the Apex-SQL paper [here](https://arxiv.org/pdf/2602.16720).
+The first included primitive is a `LogicalPlanner` that turns a natural-language analytics question into an ordered list of abstract logical steps.
 
 The `LogicalPlanner` has a `plan` method that can generate one plan or sample multiple plans and aggregate them with `num_samples`.
 

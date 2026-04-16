@@ -95,10 +95,18 @@ litellm = [
 bigquery = [
     "sqlalchemy-bigquery>=1.0.0",
 ]
+# for use with example jupyter notebooks
+examples = [
+    # "notebook>=7.0",
+    # "jupyterlab>=4.0",
+    "ipykernel>=6.0",
+]
 
 [dependency-groups]
 dev = [
     "build>=1.4.3",
+    "nbstripout>=0.8.1",
+    "pre-commit>=4.0.0",
     "twine>=6.2.0",
 ]
 test = [
