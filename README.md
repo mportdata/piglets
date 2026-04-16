@@ -81,7 +81,7 @@ print(f"Aggregated from {len(logical_plan.sample_plans)} sample plans.")
 
 ### Database connector
 
-**Note:** only support `bigquery`, support for all other popular database types coming soon. 
+**Note:** currently only supports `bigquery`, support for all other popular database types coming soon. 
 
 Use `DatabaseConnector` to inspect a supported database and return a typed schema.
 
