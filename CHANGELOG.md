@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.10 - 2026-04-16
+
+### Changed
+- Clean up the dual-pathway pruning notebook example by centralizing model, database, and question configuration.
+- Strip cached notebook outputs from the pruning example.
+- Clarify in the README that `DatabaseConnector` currently supports BigQuery.
+- Add a `DatabaseConnector` TODO to research Apache Arrow ADBC connectors.
+
 ## 0.1.9 - 2026-04-16
 
 ### Added
