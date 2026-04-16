@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.9 - 2026-04-16
+
+### Added
+- Add a Jupyter notebook example for dual-pathway pruning with OpenAI and BigQuery.
+- Add an `examples` optional dependency extra for notebook kernels.
+- Add pre-commit notebook output stripping with `nbstripout`.
+
+### Changed
+- Add `.ipynb_checkpoints/` to `.gitignore`.
+- Add `pre-commit` and `nbstripout` to the development dependency group.
+- Simplify the README planning description.
+
 ## 0.1.8 - 2026-04-15
 
 ### Added

@@ -1,6 +1,6 @@
 [project]
 name = "piglets"
-version = "0.1.8"
+version = "0.1.9"
 description = "A modular text-to-SQL toolkit."
 readme = "README.md"
 requires-python = ">=3.10"
