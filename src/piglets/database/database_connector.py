@@ -5,6 +5,7 @@ from sqlalchemy import create_engine, inspect
 from piglets.types import Column, Database, Table
 
 class DatabaseConnector():
+    # TODO: Research using ADBC connectors rather than an orm (https://github.com/apache/arrow-adbc)
     """Base class for database connectors."""
     def __init__(self, database_type: str, database_name: str, gcp_project_id: str = None):
         if database_type == "bigquery":
