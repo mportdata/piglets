@@ -4,6 +4,7 @@ version = "0.1.10"
 description = "A modular text-to-SQL toolkit."
 readme = "README.md"
 requires-python = ">=3.10"
+license = "MIT"
 dependencies = [
     "langchain>=1.0",
     "pydantic>=2.13.0",
@@ -94,6 +95,9 @@ litellm = [
 # sqlalchemy dependencies for various database types.
 bigquery = [
     "sqlalchemy-bigquery>=1.0.0",
+]
+snowflake = [
+    "snowflake-sqlalchemy>=1.9.0",
 ]
 # for use with example jupyter notebooks
 examples = [

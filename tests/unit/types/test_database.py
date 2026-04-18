@@ -52,10 +52,6 @@ def test_database_subtract_removes_matching_tables_and_columns():
 
     remaining_database = source_database.subtract(database_to_subtract)
 
-    print(f"Source database: {source_database}")
-    print(f"Database to subtract: {database_to_subtract}")
-    print(f"Remaining database: {remaining_database}")
-
     assert remaining_database == Database(
         name="example",
         tables=[
@@ -118,10 +114,6 @@ def test_database_union_combines_tables_and_columns_without_duplicates():
     )
 
     union_database = left_database.union(right_database)
-
-    print(f"Left database: {left_database}")
-    print(f"Right database: {right_database}")
-    print(f"Union database: {union_database}")
 
     assert union_database == Database(
         name="example",

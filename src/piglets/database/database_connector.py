@@ -1,26 +1,48 @@
+import logging
 import os
 from dotenv import load_dotenv
-from sqlalchemy import create_engine, inspect
+from sqlalchemy import create_engine, inspect, URL
 
 from piglets.types import Column, Database, Table
 
-class DatabaseConnector():
-    # TODO: Research using ADBC connectors rather than an orm (https://github.com/apache/arrow-adbc)
-    """Base class for database connectors."""
-    def __init__(self, database_type: str, database_name: str, gcp_project_id: str = None):
-        if database_type == "bigquery":
+logger = logging.getLogger(__name__)
 
-            load_dotenv()
-            google_cloud_project_id = os.getenv("GOOGLE_CLOUD_PROJECT_ID", None)
-            if not gcp_project_id and not google_cloud_project_id:
-                    raise ValueError("GCP project ID must be provided for BigQuery databases.")
-            else:
-                 self.database_name = database_name
-                 connection_string = f"{database_type}://{gcp_project_id or google_cloud_project_id}/{database_name}"
-                 self.engine = create_engine(connection_string)
-                 self.inspector = inspect(self.engine)
-        else:
-             raise ValueError("Currently supported database_type's: `bigquery`")
+class DatabaseConnector():
+    """Base class for database connectors."""
+    def __init__(
+                self, 
+                database_type: str, 
+                database_name: str,              
+                username: str = None,
+                password: str = None, 
+                host: str = None,
+                port: int = None,
+                database: str = None,
+                gcp_project_id: str = None
+    ):
+        if database_type == "bigquery":
+            if not host:
+                if gcp_project_id:
+                    host = gcp_project_id
+                else:
+                    load_dotenv()
+                    google_cloud_project_id = os.getenv("GOOGLE_CLOUD_PROJECT_ID", None)
+                    host = google_cloud_project_id
+            if not host:
+                raise ValueError("gcp_project_id must be provided for BigQuery databases.")
+
+        connection_url = URL.create(
+            drivername=database_type,
+            username=username,
+            password=password,
+            host=host,
+            port=port,
+            database=database_name
+        )
+        logger.info(f"Connecting to database with URL: {connection_url}")
+        self.engine = create_engine(connection_url)
+        self.inspector = inspect(self.engine)
+        self.database_name = database_name
 
     def get_database_schema(self) -> Database:
         """Returns the schema of the database."""
@@ -33,3 +55,5 @@ class DatabaseConnector():
             table = Table(name=table_name, columns=columns)
             tables.append(table)
         return Database(name=self.database_name, tables=tables)
+    
+     # TODO: Implement database querying methods using connector-x or similar libraries for efficient querying and data retrieval.

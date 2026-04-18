@@ -30,6 +30,5 @@ def test_bigquery_connector_get_database_schema(biquery_connector):
 def test_bigquery_connector_export_database_as_string(biquery_connector):
     database_schema: Database = biquery_connector.get_database_schema()
     database_string = database_schema.export_as_string()
-    print(database_string)
     assert isinstance(database_string, str)
     assert "Database: stack_overflow" in database_string

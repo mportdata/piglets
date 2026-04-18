@@ -81,8 +81,6 @@ print(f"Aggregated from {len(logical_plan.sample_plans)} sample plans.")
 
 ### Database connector
 
-**Note:** currently only supports `bigquery`, support for all other popular database types coming soon. 
-
 Use `DatabaseConnector` to inspect a supported database and return a typed schema.
 
 ```python
@@ -111,6 +109,32 @@ database_connector = DatabaseConnector(
     gcp_project_id="my-gcp-project",
 )
 ```
+
+### Supported Databases
+
+Arguments passed to the `DatabaseConnector` are used to create a url of the form:
+```
+dialect+driver://username:password@host:port/database
+```
+or in the case of `bigquery`
+```
+bigquery://project_id/dataset
+```
+and in the case of `snowflake`
+```
+snowflake://username:password@account/database
+```
+more intuitive paramater names and optional dependencies will be added shortly for all major cloud datawarehouse and lakehouses.
+
+| Database type | `database_type` value | Install requirement | Notes |
+| --- | --- | --- | --- |
+| SQLite | `sqlite` | Included by default | Uses SQLAlchemy's built-in SQLite dialect. |
+| MySQL | `mysql` | SQLAlchemy dialect included by default | Requires a compatible MySQL DBAPI driver. |
+| PostgreSQL | `postgresql` | SQLAlchemy dialect included by default | Requires a compatible PostgreSQL DBAPI driver. |
+| Oracle | `oracle` | SQLAlchemy dialect included by default | Requires a compatible Oracle DBAPI driver. |
+| Microsoft SQL Server | `mssql` | SQLAlchemy dialect included by default | Requires a compatible SQL Server DBAPI driver. |
+| BigQuery | `bigquery` | `piglets[bigquery]` | Uses `GOOGLE_CLOUD_PROJECT_ID` or `gcp_project_id` for the GCP project. |
+| Snowflake | `snowflake` | `piglets[snowflake]` | Uses the Snowflake SQLAlchemy dialect and Snowflake Connector for Python. |
 
 ### Dual-pathway pruning
 
