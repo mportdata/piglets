@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.11 - 2026-04-18
+
+### Added
+- Add MIT licensing metadata and a root `LICENSE` file.
+- Add a `snowflake` optional dependency extra backed by `snowflake-sqlalchemy`.
+- Add README documentation for supported SQLAlchemy database types.
+
+### Changed
+- Generalize `DatabaseConnector` URL construction for SQLAlchemy dialects while keeping BigQuery project resolution.
+- Remove noisy test debug printing from database-related tests.
+
 ## 0.1.10 - 2026-04-16
 
 ### Changed
