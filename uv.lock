@@ -4383,6 +4383,7 @@ dev = [
 test = [
     { name = "langchain-openai" },
     { name = "pytest" },
+    { name = "snowflake-sqlalchemy" },
     { name = "sqlalchemy-bigquery" },
 ]
 
@@ -4434,6 +4435,7 @@ dev = [
 test = [
     { name = "langchain-openai", specifier = ">=1.0" },
     { name = "pytest", specifier = ">=8.0" },
+    { name = "snowflake-sqlalchemy", specifier = ">=1.9.0" },
     { name = "sqlalchemy-bigquery", specifier = ">=1.0.0" },
 ]
 

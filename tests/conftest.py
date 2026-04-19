@@ -50,6 +50,6 @@ def logical_planner(model_name) -> LogicalPlanner:
 def bigquery_connector():
     database_connector = DatabaseConnector(
         database_type="bigquery",
-        database_name="stack_overflow",
+        bq_dataset="stack_overflow",
     )
     return database_connector

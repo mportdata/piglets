@@ -101,8 +101,6 @@ snowflake = [
 ]
 # for use with example jupyter notebooks
 examples = [
-    # "notebook>=7.0",
-    # "jupyterlab>=4.0",
     "ipykernel>=6.0",
 ]
 
@@ -116,7 +114,8 @@ dev = [
 test = [
     "pytest>=8.0",
     "langchain-openai>=1.0",
-    "sqlalchemy-bigquery>=1.0.0"
+    "sqlalchemy-bigquery>=1.0.0",
+    "snowflake-sqlalchemy>=1.9.0"
 ]
 
 [tool.setuptools]
