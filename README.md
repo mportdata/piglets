@@ -88,7 +88,7 @@ from piglets import DatabaseConnector
 
 database_connector = DatabaseConnector(
     database_type="bigquery",
-    database_name="my_bigquery_dataset",
+    bq_dataset="my_bigquery_dataset",
 )
 
 database = database_connector.get_database_schema()
@@ -112,20 +112,6 @@ database_connector = DatabaseConnector(
 
 ### Supported Databases
 
-Arguments passed to the `DatabaseConnector` are used to create a url of the form:
-```
-dialect+driver://username:password@host:port/database
-```
-or in the case of `bigquery`
-```
-bigquery://project_id/dataset
-```
-and in the case of `snowflake`
-```
-snowflake://username:password@account/database
-```
-more intuitive paramater names and optional dependencies will be added shortly for all major cloud datawarehouse and lakehouses.
-
 | Database type | `database_type` value | Install requirement | Notes |
 | --- | --- | --- | --- |
 | SQLite | `sqlite` | Included by default | Uses SQLAlchemy's built-in SQLite dialect. |
@@ -134,7 +120,7 @@ more intuitive paramater names and optional dependencies will be added shortly f
 | Oracle | `oracle` | SQLAlchemy dialect included by default | Requires a compatible Oracle DBAPI driver. |
 | Microsoft SQL Server | `mssql` | SQLAlchemy dialect included by default | Requires a compatible SQL Server DBAPI driver. |
 | BigQuery | `bigquery` | `piglets[bigquery]` | Uses `GOOGLE_CLOUD_PROJECT_ID` or `gcp_project_id` for the GCP project. |
-| Snowflake | `snowflake` | `piglets[snowflake]` | Uses the Snowflake SQLAlchemy dialect and Snowflake Connector for Python. |
+| Snowflake | `snowflake` | `piglets[snowflake]` | Uses `SNOWFLAKE_ACCOUNT`, `SNOWFLAKE_USER` and `SNOWFLAKE_PASSWORD` environment variables. |
 
 ### Dual-pathway pruning
 
@@ -153,7 +139,7 @@ logical_plan = logical_planner.plan(
 
 database_connector = DatabaseConnector(
     database_type="bigquery",
-    database_name="stack_overflow",
+    bq_dataset="stack_overflow",
 )
 database = database_connector.get_database_schema()
 
@@ -166,22 +152,3 @@ pruned_database = pruner.dual_pathway_pruning(
 
 print(pruned_database.export_as_string())
 ```
-
-## Current scope
-
-### Database
-
-`DatabaseConnector` currently supports BigQuery. It connects to a database by `database_name` and returns a `Database` object containing `Table` and `Column` objects.
-
-### Planning
-
-The first included primitive is a `LogicalPlanner` that turns a natural-language analytics question into an ordered list of abstract logical steps.
-
-The `LogicalPlanner` has a `plan` method that can generate one plan or sample multiple plans and aggregate them with `num_samples`.
-
-Plan aggregation is available through `LogicalPlans.aggregate()`.
-Aggregated plans include a `sample_plans` attribute containing the candidate `LogicalPlan` objects used to produce the final plan.
-
-### Pruning
-
-`Pruner` supports preservation pruning, deletion pruning, and dual-pathway pruning. Preservation pruning returns a `PreservationSet` of useful tables and columns. Deletion pruning returns a `DeletionSet` of irrelevant tables and columns. Dual-pathway pruning combines both into a final pruned `Database`.
