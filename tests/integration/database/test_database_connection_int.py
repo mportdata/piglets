@@ -1,25 +1,30 @@
+import os
+
 import pytest
 
 from piglets.types import Database, Column, Table
 
 pytest.importorskip("sqlalchemy_bigquery")
 
-from piglets.database import DatabaseConnector
+from piglets.database import BigQueryURL, DatabaseConnector, SnowflakeURL
 
 @pytest.fixture
 def biquery_connector():
     database_connector = DatabaseConnector(
-        database_type="bigquery",
-        bq_dataset="stack_overflow",
+        connection=BigQueryURL(dataset="stack_overflow"),
     )
     return database_connector
 
 @pytest.fixture
 def snowflake_connector():
     database_connector = DatabaseConnector(
-        database_type="snowflake",
-        snowflake_database="SNOWFLAKE_SAMPLE_DATA",
-        snowflake_schema="TPCH_SF1",
+        connection=SnowflakeURL(
+            account=os.getenv("SNOWFLAKE_ACCOUNT"),
+            user=os.getenv("SNOWFLAKE_USER"),
+            password=os.getenv("SNOWFLAKE_PASSWORD"),
+            database="SNOWFLAKE_SAMPLE_DATA",
+            schema="TPCH_SF1",
+        ),
     )
     return database_connector
 
