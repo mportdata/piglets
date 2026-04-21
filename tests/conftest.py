@@ -6,6 +6,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from piglets import (
+    BigQueryURL,
     DatabaseConnector, 
     LogicalPlanner,
     LogicalSteps
@@ -49,7 +50,6 @@ def logical_planner(model_name) -> LogicalPlanner:
 @pytest.fixture
 def bigquery_connector():
     database_connector = DatabaseConnector(
-        database_type="bigquery",
-        bq_dataset="stack_overflow",
+        connection=BigQueryURL(dataset="stack_overflow"),
     )
     return database_connector

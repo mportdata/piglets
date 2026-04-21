@@ -81,14 +81,15 @@ print(f"Aggregated from {len(logical_plan.sample_plans)} sample plans.")
 
 ### Database connector
 
-Use `DatabaseConnector` to inspect a supported database and return a typed schema.
+Use `DatabaseConnector` to inspect a database and return a typed schema. Pass either a SQLAlchemy `URL`, a connection string, or one of Piglets' helper URL classes.
 
 ```python
-from piglets import DatabaseConnector
+from piglets import BigQueryURL, DatabaseConnector
 
 database_connector = DatabaseConnector(
-    database_type="bigquery",
-    bq_dataset="my_bigquery_dataset",
+    connection=BigQueryURL(
+        dataset="my_bigquery_dataset",
+    ),
 )
 
 database = database_connector.get_database_schema()
@@ -100,34 +101,66 @@ for table in database.tables:
         print(f"- {column.name} ({column.data_type})")
 ```
 
-BigQuery connections use the `GOOGLE_CLOUD_PROJECT_ID` environment variable by default. You can also pass `gcp_project_id` directly:
+BigQuery connections can include an explicit GCP project ID:
 
 ```python
 database_connector = DatabaseConnector(
-    database_type="bigquery",
-    database_name="my_bigquery_dataset",
-    gcp_project_id="my-gcp-project",
+    connection=BigQueryURL(
+        project_id="my-gcp-project",
+        dataset="my_bigquery_dataset",
+    ),
 )
 ```
 
-### Supported Databases
+### Supported databases
 
-| Database type | `database_type` value | Install requirement | Notes |
+`DatabaseConnector` supports any database URL accepted by SQLAlchemy. Use `URL` for SQLAlchemy-native dialects and Piglets helper URL classes where the connection string has backend-specific parameters.
+
+| Backend | Connection object | Install requirement | Notes |
 | --- | --- | --- | --- |
-| SQLite | `sqlite` | Included by default | Uses SQLAlchemy's built-in SQLite dialect. |
-| MySQL | `mysql` | SQLAlchemy dialect included by default | Requires a compatible MySQL DBAPI driver. |
-| PostgreSQL | `postgresql` | SQLAlchemy dialect included by default | Requires a compatible PostgreSQL DBAPI driver. |
-| Oracle | `oracle` | SQLAlchemy dialect included by default | Requires a compatible Oracle DBAPI driver. |
-| Microsoft SQL Server | `mssql` | SQLAlchemy dialect included by default | Requires a compatible SQL Server DBAPI driver. |
-| BigQuery | `bigquery` | `piglets[bigquery]` | Uses `GOOGLE_CLOUD_PROJECT_ID` or `gcp_project_id` for the GCP project. |
-| Snowflake | `snowflake` | `piglets[snowflake]` | Uses `SNOWFLAKE_ACCOUNT`, `SNOWFLAKE_USER` and `SNOWFLAKE_PASSWORD` environment variables. |
+| SQLAlchemy-supported databases | `URL` or a connection string | Depends on the SQLAlchemy dialect and DBAPI driver | Use this for SQLite, PostgreSQL, MySQL, Oracle, SQL Server, and other standard SQLAlchemy dialects. |
+| BigQuery | `BigQueryURL` | `piglets[bigquery]` | Uses `GOOGLE_CLOUD_PROJECT_ID` when `project_id` is omitted. |
+| Snowflake | `SnowflakeURL` | `piglets[snowflake]` | Builds Snowflake URLs from explicit connection parameters. |
+| DuckDB | `DuckDBURL` | `piglets[duckdb]` | Builds local or in-memory DuckDB URLs. |
+| MotherDuck | `MotherDuckURL` | `piglets[duckdb]` | Builds MotherDuck URLs through the DuckDB SQLAlchemy dialect. |
+
+For a SQLAlchemy-native database, create a standard SQLAlchemy `URL`:
+
+```python
+from piglets import DatabaseConnector, URL
+
+database_connector = DatabaseConnector(
+    connection=URL.create(
+        drivername="sqlite",
+        database="example.db",
+    ),
+)
+database = database_connector.get_database_schema()
+```
+
+For a backend with a Piglets helper class, pass that URL object directly:
+
+```python
+from piglets import DatabaseConnector, SnowflakeURL
+
+database_connector = DatabaseConnector(
+    connection=SnowflakeURL(
+        account="my-account",
+        user="my-user",
+        password="my-password",
+        database="SNOWFLAKE_SAMPLE_DATA",
+        schema="TPCH_SF1",
+    ),
+)
+database = database_connector.get_database_schema()
+```
 
 ### Dual-pathway pruning
 
 Use `Pruner` to reduce a database schema with both preservation and deletion signals. The preservation pathway selects tables and columns that look useful for the query. The deletion pathway removes tables and columns that look irrelevant. `dual_pathway_pruning()` combines both paths into a final `Database` schema.
 
 ```python
-from piglets import DatabaseConnector, LogicalPlanner, Pruner
+from piglets import BigQueryURL, DatabaseConnector, LogicalPlanner, Pruner
 
 question = "Which tags saw the largest increase in average answer score from 2022 to 2023, considering only questions with at least 5 answers?"
 
@@ -138,8 +171,9 @@ logical_plan = logical_planner.plan(
 )
 
 database_connector = DatabaseConnector(
-    database_type="bigquery",
-    bq_dataset="stack_overflow",
+    connection=BigQueryURL(
+        dataset="stack_overflow",
+    ),
 )
 database = database_connector.get_database_schema()
 
