@@ -4331,7 +4331,7 @@ wheels = [
 
 [[package]]
 name = "piglets"
-version = "0.1.12"
+version = "0.1.13"
 source = { virtual = "." }
 dependencies = [
     { name = "langchain" },
