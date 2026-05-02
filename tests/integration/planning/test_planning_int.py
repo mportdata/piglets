@@ -12,12 +12,12 @@ def test_logical_planner(natural_language_query, logical_planner):
     assert all(isinstance(step, str) for step in logical_plan.logical_steps)
 
 
-def test_multi_sample_logical_planner(natural_language_query, logical_planner):
+def test_multi_sample_logical_planner(
+    natural_language_query,
+    aggregate_logical_plan,
+):
     num_samples = 3
-    logical_plan = logical_planner.plan(
-        natural_language_query=natural_language_query,
-        num_samples=num_samples,
-    )
+    logical_plan = aggregate_logical_plan
 
     assert isinstance(logical_plan, AggregatePlan)
     assert logical_plan.natural_language_query == natural_language_query
