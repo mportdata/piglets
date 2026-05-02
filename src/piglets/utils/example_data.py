@@ -14,8 +14,11 @@ def create_tpch_example_duckdb_db(
     if db_path.exists() and not overwrite:
         try:
             con = duckdb.connect(str(db_path))
-        except duckdb.IOException as exc:
-            if "Could not set lock on file" in str(exc):
+        except (duckdb.ConnectionException, duckdb.IOException) as exc:
+            if (
+                "Could not set lock on file" in str(exc)
+                or "different configuration than existing connection" in str(exc)
+            ):
                 return db_path
             raise
 
