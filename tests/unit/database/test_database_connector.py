@@ -13,6 +13,7 @@ class FakeInspector:
 
 
 def test_database_name_from_bigquery_connection(monkeypatch):
+    monkeypatch.delenv("GOOGLE_CLOUD_PROJECT", raising=False)
     monkeypatch.delenv("GOOGLE_CLOUD_PROJECT_ID", raising=False)
 
     assert database_name_from_connection(
@@ -24,10 +25,21 @@ def test_database_name_from_bigquery_connection(monkeypatch):
 
 
 def test_database_name_from_bigquery_connection_uses_env_project(monkeypatch):
+    monkeypatch.delenv("GOOGLE_CLOUD_PROJECT", raising=False)
     monkeypatch.setenv("GOOGLE_CLOUD_PROJECT_ID", "env-project")
 
     assert database_name_from_connection(BigQueryURL(dataset="dataset")) == "env-project:dataset"
     assert database_name_from_connection(BigQueryURL()) == "env-project"
+
+
+def test_database_name_from_bigquery_connection_prefers_google_cloud_project(monkeypatch):
+    monkeypatch.setenv("GOOGLE_CLOUD_PROJECT", "google-cloud-project")
+    monkeypatch.setenv("GOOGLE_CLOUD_PROJECT_ID", "google-cloud-project-id")
+
+    assert (
+        database_name_from_connection(BigQueryURL(dataset="dataset"))
+        == "google-cloud-project:dataset"
+    )
 
 
 def test_database_name_from_snowflake_connection():
@@ -69,6 +81,7 @@ def test_database_name_from_sqlalchemy_url():
 
 
 def test_database_connector_accepts_url_builder(monkeypatch):
+    monkeypatch.delenv("GOOGLE_CLOUD_PROJECT", raising=False)
     monkeypatch.delenv("GOOGLE_CLOUD_PROJECT_ID", raising=False)
     created = {}
 
@@ -84,6 +97,31 @@ def test_database_connector_accepts_url_builder(monkeypatch):
     assert created["connection"] == "bigquery://project/dataset"
     assert connector.database_name == "project:dataset"
     assert isinstance(connector.inspector, FakeInspector)
+
+
+def test_database_connector_passes_url_builder_engine_kwargs(monkeypatch):
+    monkeypatch.delenv("GOOGLE_CLOUD_PROJECT", raising=False)
+    monkeypatch.delenv("GOOGLE_CLOUD_PROJECT_ID", raising=False)
+    created = {}
+
+    def fake_create_engine(connection, **kwargs):
+        created["connection"] = connection
+        created["kwargs"] = kwargs
+        return object()
+
+    monkeypatch.setattr("piglets.database.database_connector.create_engine", fake_create_engine)
+    monkeypatch.setattr("piglets.database.database_connector.inspect", lambda engine: FakeInspector())
+
+    DatabaseConnector(
+        connection=BigQueryURL(
+            project_id="bigquery-public-data",
+            dataset="stackoverflow",
+            billing_project_id="billing-project",
+        )
+    )
+
+    assert created["connection"] == "bigquery://bigquery-public-data/stackoverflow"
+    assert created["kwargs"] == {"billing_project_id": "billing-project"}
 
 
 def test_database_connector_uses_unhidden_url_builder_string(monkeypatch):

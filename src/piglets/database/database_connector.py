@@ -15,6 +15,12 @@ def connection_to_sqlalchemy_url(connection: Any) -> str:
     return connection
 
 
+def connection_to_create_engine_kwargs(connection: Any) -> dict[str, Any]:
+    if hasattr(connection, "create_engine_kwargs"):
+        return connection.create_engine_kwargs()
+    return {}
+
+
 def database_name_from_connection(connection: Any) -> str:
     connection_url = connection_to_sqlalchemy_url(connection)
     url = make_url(connection_url)
@@ -50,10 +56,11 @@ class DatabaseConnector():
                 connection: Any
     ):
         connection_url = connection_to_sqlalchemy_url(connection)
+        engine_kwargs = connection_to_create_engine_kwargs(connection)
         self.database_name = database_name_from_connection(connection_url)
 
         logger.info("Connecting to database %s", self.database_name)
-        self.engine = create_engine(connection_url)
+        self.engine = create_engine(connection_url, **engine_kwargs)
         self.inspector = inspect(self.engine)
 
     def get_database_schema(self) -> Database:
