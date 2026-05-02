@@ -4,6 +4,9 @@ from .plans import (
     LogicalPlans as LogicalPlans,
     LogicalSteps as LogicalSteps,
 )
+from .linking import (
+    SemanticLinkingResult as SemanticLinkingResult,
+)
 from .database import (
     Column as Column,
     Database as Database,
@@ -23,6 +26,7 @@ __all__ = [
     "LogicalPlan",
     "LogicalPlans",
     "LogicalSteps",
+    "SemanticLinkingResult",
     # database types
     "Column",
     "Database",

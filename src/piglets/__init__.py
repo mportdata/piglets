@@ -7,6 +7,7 @@ from .database import (
 )
 from .planning import LogicalPlanner as LogicalPlanner
 from .pruning import Pruner as Pruner
+from .semantic_linking import SemanticLinker as SemanticLinker
 from .types import (
     AggregatePlan as AggregatePlan,
     Database as Database,
@@ -18,6 +19,7 @@ from .types import (
     PreservationColumns as PreservationColumns,
     PreservationSet as PreservationSet,
     PruningColumns as PruningColumns,
+    SemanticLinkingResult as SemanticLinkingResult,
     Table as Table,
 )
 
@@ -34,6 +36,7 @@ __all__ = [
     "create_tpch_example_duckdb_db",
     # Planning
     "LogicalPlanner",
+    "SemanticLinker",
     # Types
     "AggregatePlan",
     "Database",
@@ -45,6 +48,7 @@ __all__ = [
     "PreservationColumns",
     "PreservationSet",
     "PruningColumns",
+    "SemanticLinkingResult",
     "Table",
     # Pruning
     "Pruner"
