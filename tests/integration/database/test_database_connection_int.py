@@ -1,38 +1,11 @@
-import os
-
-import pytest
-
 from piglets.types import Database, Column, Table
 
-pytest.importorskip("sqlalchemy_bigquery")
 
-from piglets.database import BigQueryURL, DatabaseConnector, SnowflakeURL
-
-@pytest.fixture
-def biquery_connector():
-    database_connector = DatabaseConnector(
-        connection=BigQueryURL(dataset="stack_overflow"),
-    )
-    return database_connector
-
-@pytest.fixture
-def snowflake_connector():
-    database_connector = DatabaseConnector(
-        connection=SnowflakeURL(
-            account=os.getenv("SNOWFLAKE_ACCOUNT"),
-            user=os.getenv("SNOWFLAKE_USER"),
-            password=os.getenv("SNOWFLAKE_PASSWORD"),
-            database="SNOWFLAKE_SAMPLE_DATA",
-            schema="TPCH_SF1",
-        ),
-    )
-    return database_connector
-
-def test_bigquery_connector_get_database_schema(biquery_connector):
-    database_schema: Database = biquery_connector.get_database_schema()
+def test_duckdb_connector_get_database_schema(duckdb_database):
+    database_schema: Database = duckdb_database
 
     assert isinstance(database_schema, Database)
-    assert database_schema.name == "stack_overflow"
+    assert database_schema.name.endswith("tpch_sf001.duckdb")
     assert len(database_schema.tables) > 0
     assert all(isinstance(table, Table) for table in database_schema.tables)
     for table in database_schema.tables:
@@ -41,11 +14,26 @@ def test_bigquery_connector_get_database_schema(biquery_connector):
         assert all(isinstance(column.name, str) for column in table.columns)
         assert all(isinstance(column.data_type, str) for column in table.columns)
 
-def test_bigquery_connector_export_database_as_string(biquery_connector):
-    database_schema: Database = biquery_connector.get_database_schema()
+def test_duckdb_connector_export_database_as_string(duckdb_database):
+    database_schema: Database = duckdb_database
     database_string = database_schema.export_as_string()
     assert isinstance(database_string, str)
-    assert "Database: stack_overflow" in database_string
+    assert "Database:" in database_string
+    assert "customer" in database_string
+
+
+def test_bigquery_connector_get_database_schema(bigquery_database):
+    database_schema: Database = bigquery_database
+
+    assert isinstance(database_schema, Database)
+    assert len(database_schema.tables) > 0
+    assert all(isinstance(table, Table) for table in database_schema.tables)
+    for table in database_schema.tables:
+        assert len(table.columns) > 0
+        assert all(isinstance(column, Column) for column in table.columns)
+        assert all(isinstance(column.name, str) for column in table.columns)
+        assert all(isinstance(column.data_type, str) for column in table.columns)
+
 
 def test_snowflake_connector_get_database_schema(snowflake_connector):
     database_schema: Database = snowflake_connector.get_database_schema()
