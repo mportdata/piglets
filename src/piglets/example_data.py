@@ -12,7 +12,13 @@ def create_tpch_example_duckdb_db(
     db_path.parent.mkdir(parents=True, exist_ok=True)
 
     if db_path.exists() and not overwrite:
-        con = duckdb.connect(str(db_path))
+        try:
+            con = duckdb.connect(str(db_path))
+        except duckdb.IOException as exc:
+            if "Could not set lock on file" in str(exc):
+                return db_path
+            raise
+
         try:
             table_count = con.execute(
                 "SELECT COUNT(*) FROM information_schema.tables "
