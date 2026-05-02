@@ -1,5 +1,6 @@
 from langchain.chat_models import init_chat_model
 
+from piglets.policies import SemanticRules
 from piglets.types import AggregatePlan, Database, LogicalPlan, SemanticLinkingResult
 
 class SemanticLinker:
@@ -7,9 +8,11 @@ class SemanticLinker:
         self,
         model_name: str,
         model_provider: str = None,
+        rules: SemanticRules | None = None,
     ):
         self.model_name = model_name
         self.model_provider = model_provider
+        self.rules = rules or SemanticRules()
     
     def link(
         self,
@@ -23,6 +26,7 @@ class SemanticLinker:
             SemanticLinkingResult,
             method="function_calling",
         )
+        critical_rules = self.rules.to_string()
 
         SEMANTIC_LINKING_PROMPT = f"""
             *** TASK CONTEXT ***
@@ -30,6 +34,7 @@ class SemanticLinker:
             the database schema and a user question.
             Your goal is to perform **Semantic Linking**: Analyze the
             database structure and how it grounds the user’s intent.
+            {critical_rules}
             *** USER QUESTION ***
             {natural_language_query}
             *** Logical Plan ***
