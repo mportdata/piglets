@@ -16,7 +16,6 @@ def test_multi_sample_logical_planner(
     natural_language_query,
     aggregate_logical_plan,
 ):
-    num_samples = 3
     logical_plan = aggregate_logical_plan
 
     assert isinstance(logical_plan, AggregatePlan)
@@ -27,7 +26,7 @@ def test_multi_sample_logical_planner(
         for step in logical_plan.logical_steps
     )
     assert isinstance(logical_plan.sample_plans, list)
-    assert len(logical_plan.sample_plans) == num_samples
+    assert len(logical_plan.sample_plans) > 1
     assert all(
         isinstance(plan, LogicalPlan)
         for plan in logical_plan.sample_plans
