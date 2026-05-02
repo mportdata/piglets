@@ -7,8 +7,10 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from piglets import (
+    AggregatePlan,
     Database,
     DatabaseConnector,
+    LogicalPlan,
     LogicalPlanner,
     LogicalSteps,
 )
@@ -137,6 +139,28 @@ def snowflake_connector():
         ),
     )
     return database_connector
+
+
+@pytest.fixture
+def logical_plan(
+    natural_language_query: str,
+    logical_planner: LogicalPlanner,
+) -> LogicalPlan:
+    return logical_planner.plan(
+        natural_language_query=natural_language_query,
+        num_samples=1,
+    )
+
+
+@pytest.fixture
+def aggregate_logical_plan(
+    natural_language_query: str,
+    logical_planner: LogicalPlanner,
+) -> AggregatePlan:
+    return logical_planner.plan(
+        natural_language_query=natural_language_query,
+        num_samples=3,
+    )
 
 
 @pytest.fixture
