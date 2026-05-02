@@ -6,6 +6,8 @@ from .database import (
     database_name_from_connection_string as database_name_from_connection_string,
 )
 from .planning import LogicalPlanner as LogicalPlanner
+from .policies import RuleMode as RuleMode
+from .policies import SemanticRules as SemanticRules
 from .pruning import Pruner as Pruner
 from .semantic_linking import SemanticLinker as SemanticLinker
 from .types import (
@@ -37,6 +39,8 @@ __all__ = [
     # Planning
     "LogicalPlanner",
     "SemanticLinker",
+    "RuleMode",
+    "SemanticRules",
     # Types
     "AggregatePlan",
     "Database",

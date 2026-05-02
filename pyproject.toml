@@ -131,6 +131,7 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 "piglets.planning.logical_planning" = ["*.md"]
+"piglets.policies" = ["prompts/*.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
