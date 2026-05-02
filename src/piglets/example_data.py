@@ -1,4 +1,5 @@
 from pathlib import Path
+
 import duckdb
 
 
@@ -22,8 +23,8 @@ def create_tpch_example_duckdb_db(
 
         if table_count > 0:
             return db_path
-        else:
-            db_path.unlink()
+
+        db_path.unlink()
 
     if db_path.exists() and overwrite:
         db_path.unlink()
@@ -37,3 +38,8 @@ def create_tpch_example_duckdb_db(
         con.close()
 
     return db_path
+
+
+__all__ = [
+    "create_tpch_example_duckdb_db",
+]

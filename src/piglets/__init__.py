@@ -31,6 +31,7 @@ __all__ = [
     "URL",
     "database_name_from_connection",
     "database_name_from_connection_string",
+    "create_tpch_example_duckdb_db",
     # Planning
     "LogicalPlanner",
     # Types
@@ -63,4 +64,8 @@ def __getattr__(name):
         from .database import SnowflakeURL
 
         return SnowflakeURL
+    if name == "create_tpch_example_duckdb_db":
+        from .example_data import create_tpch_example_duckdb_db
+
+        return create_tpch_example_duckdb_db
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
