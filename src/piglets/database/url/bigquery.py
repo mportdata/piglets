@@ -4,11 +4,16 @@ from typing import Any
 from urllib.parse import quote_plus, urlencode
 
 
+def google_cloud_project_from_env() -> str | None:
+    return os.getenv("GOOGLE_CLOUD_PROJECT") or os.getenv("GOOGLE_CLOUD_PROJECT_ID")
+
+
 class BigQueryURL:
     def __init__(
         self,
         project_id: str | None = None,
         dataset: str | None = None,
+        billing_project_id: str | None = None,
         credentials_path: str | None = None,
         credentials_base64: str | None = None,
         location: str | None = None,
@@ -29,6 +34,7 @@ class BigQueryURL:
     ):
         self.project_id = project_id
         self.dataset = dataset
+        self.billing_project_id = billing_project_id
         self.credentials_path = credentials_path
         self.credentials_base64 = credentials_base64
         self.location = location
@@ -46,6 +52,11 @@ class BigQueryURL:
         self.use_query_cache = use_query_cache
         self.write_disposition = write_disposition
         self.user_supplied_client = user_supplied_client
+
+    def create_engine_kwargs(self) -> dict[str, Any]:
+        if self.billing_project_id:
+            return {"billing_project_id": self.billing_project_id}
+        return {}
 
     @staticmethod
     def _format_bool(value: bool) -> str:
@@ -105,7 +116,7 @@ class BigQueryURL:
         return {key: str(value) for key, value in query.items() if value is not None}
 
     def render_as_string(self, hide_password: bool = True) -> str:
-        project_id = self.project_id or os.getenv("GOOGLE_CLOUD_PROJECT_ID")
+        project_id = self.project_id or google_cloud_project_from_env()
 
         if project_id and self.dataset:
             connection_string = (

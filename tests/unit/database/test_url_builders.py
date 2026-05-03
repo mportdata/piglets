@@ -8,6 +8,7 @@ from piglets.database.url.snowflake import SnowflakeURL
 
 
 def test_bigquery_url_uses_env_project_when_project_id_is_omitted(monkeypatch):
+    monkeypatch.delenv("GOOGLE_CLOUD_PROJECT", raising=False)
     monkeypatch.setenv("GOOGLE_CLOUD_PROJECT_ID", "env-project")
 
     assert BigQueryURL(dataset="dataset").render_as_string(hide_password=False) == (
@@ -16,7 +17,17 @@ def test_bigquery_url_uses_env_project_when_project_id_is_omitted(monkeypatch):
     assert BigQueryURL().render_as_string(hide_password=False) == "bigquery://env-project"
 
 
+def test_bigquery_url_prefers_google_cloud_project_env(monkeypatch):
+    monkeypatch.setenv("GOOGLE_CLOUD_PROJECT", "google-cloud-project")
+    monkeypatch.setenv("GOOGLE_CLOUD_PROJECT_ID", "google-cloud-project-id")
+
+    assert BigQueryURL(dataset="dataset").render_as_string(hide_password=False) == (
+        "bigquery://google-cloud-project/dataset"
+    )
+
+
 def test_bigquery_url_keeps_dataset_only_when_env_project_is_missing(monkeypatch):
+    monkeypatch.delenv("GOOGLE_CLOUD_PROJECT", raising=False)
     monkeypatch.delenv("GOOGLE_CLOUD_PROJECT_ID", raising=False)
 
     assert (
@@ -37,6 +48,29 @@ def test_bigquery_render_as_string_can_hide_credentials():
     assert "credentials_base64=secret" in connection.render_as_string(
         hide_password=False
     )
+
+
+def test_bigquery_create_engine_kwargs_returns_billing_project():
+    connection = BigQueryURL(
+        project_id="project",
+        dataset="dataset",
+        billing_project_id="billing-project",
+    )
+
+    assert connection.create_engine_kwargs() == {
+        "billing_project_id": "billing-project"
+    }
+
+
+def test_bigquery_billing_project_is_not_rendered_in_url():
+    connection_string = BigQueryURL(
+        project_id="project",
+        dataset="dataset",
+        billing_project_id="billing-project",
+    ).render_as_string(hide_password=False)
+
+    assert connection_string == "bigquery://project/dataset"
+    assert "billing_project_id" not in connection_string
 
 
 def test_snowflake_render_as_string_hides_password_by_default():

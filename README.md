@@ -119,7 +119,7 @@ database_connector = DatabaseConnector(
 | Backend | Connection object | Install requirement | Notes |
 | --- | --- | --- | --- |
 | SQLAlchemy-supported databases | `URL` or a connection string | Depends on the SQLAlchemy dialect and DBAPI driver | Use this for SQLite, PostgreSQL, MySQL, Oracle, SQL Server, and other standard SQLAlchemy dialects. |
-| BigQuery | `BigQueryURL` | `piglets[bigquery]` | Uses `GOOGLE_CLOUD_PROJECT_ID` when `project_id` is omitted. |
+| BigQuery | `BigQueryURL` | `piglets[bigquery]` | Uses `GOOGLE_CLOUD_PROJECT`, then `GOOGLE_CLOUD_PROJECT_ID`, when `project_id` is omitted. |
 | Snowflake | `SnowflakeURL` | `piglets[snowflake]` | Builds Snowflake URLs from explicit connection parameters. |
 | DuckDB | `DuckDBURL` | `piglets[duckdb]` | Builds local or in-memory DuckDB URLs. |
 | MotherDuck | `MotherDuckURL` | `piglets[duckdb]` | Builds MotherDuck URLs through the DuckDB SQLAlchemy dialect. |
