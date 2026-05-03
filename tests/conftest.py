@@ -83,26 +83,15 @@ def duckdb_connector(example_duckdb_path: Path):
 def bigquery_connector():
     pytest.importorskip("sqlalchemy_bigquery")
 
-    project_id = os.getenv("GOOGLE_CLOUD_PROJECT") or os.getenv("GOOGLE_CLOUD_PROJECT_ID")
-    dataset = os.getenv("BIGQUERY_DATASET")
-
-    missing_env_vars = []
-    if not project_id:
-        missing_env_vars.append("GOOGLE_CLOUD_PROJECT or GOOGLE_CLOUD_PROJECT_ID")
-    if not dataset:
-        missing_env_vars.append("BIGQUERY_DATASET")
-    if missing_env_vars:
-        pytest.skip(
-            "BigQuery integration requires "
-            + ", ".join(missing_env_vars)
-        )
+    billing_project_id = os.getenv("GOOGLE_CLOUD_PROJECT") or os.getenv("GOOGLE_CLOUD_PROJECT_ID")
 
     from piglets import BigQueryURL
 
     database_connector = DatabaseConnector(
         connection=BigQueryURL(
-            project_id=project_id,
-            dataset=dataset,
+            project_id="bigquery-public-data",
+            dataset="stackoverflow",
+            billing_project_id=billing_project_id,
         ),
     )
     return database_connector
