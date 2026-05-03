@@ -186,3 +186,25 @@ pruned_database = pruner.dual_pathway_pruning(
 
 print(pruned_database.export_as_string())
 ```
+
+### Semantic Linking
+
+You can use `SemanticLinker` to combine a `Database` and a `LogicalPlan` into schema-specific instructions.
+
+```python
+from piglets import SemanticLinker
+
+semantic_linker = SemanticLinker(model_name=MODEL_NAME)
+
+semantic_linking_result = semantic_linker.link(
+    natural_language_query=QUESTION,
+    database=database,
+    logical_plan=logical_plan,
+)
+```
+Here `database` is a `Database` and `logical_plan` is a `LogicalPlan` or `AggregatePlan`.
+
+The `semantic_linking_result` is of type `SemanticLinkingResult` and includes the following fields:
+- `database_structure`: Overview of the database structure relevant to the user query.
+- `query_specific_content_analysis`: Detailed analysis mapping the query intent to tables, columns, filters, and joins.
+- `table_functions`: Mapping of table name to its functional role for the query.
