@@ -12,6 +12,10 @@ from .database import (
     Database as Database,
     Table as Table,
 )
+from .profiling import (
+    ProfilingQuery as ProfilingQuery,
+    ProfilingQueries as ProfilingQueries,
+)
 from .pruning import (
     DeletionColumns as DeletionColumns,
     DeletionSet as DeletionSet,
@@ -31,10 +35,13 @@ __all__ = [
     "Column",
     "Database",
     "Table",
+    # profiling types
+    "ProfilingQuery",
+    "ProfilingQueries",
     # pruning types
     "DeletionColumns",
     "DeletionSet",
     "PreservationColumns",
     "PreservationSet",
-    "PruningColumns"
+    "PruningColumns",
 ]

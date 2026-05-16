@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.15 - 2026-05-16
+
+### Added
+- Add table profiling APIs with structured `ProfilingQueries` outputs.
+- Add prompt support for rendering target-table columns in profiler instructions.
+- Add unit and integration coverage for profiling prompt construction and output shape.
+
+### Changed
+- Limit profiler policy context to generic critical rules and add single-table query guidance.
+
 ## 0.1.11 - 2026-04-18
 
 ### Added

@@ -69,6 +69,7 @@ class DatabaseConnector():
         for table_name in self.inspector.get_table_names():
             columns = []
             for column_info in self.inspector.get_columns(table_name):
+                # TODO: Populate column descriptions when metadata retrieval supports them.
                 column = Column(name=column_info["name"], data_type=str(column_info["type"]))
                 columns.append(column)
             table = Table(name=table_name, columns=columns)

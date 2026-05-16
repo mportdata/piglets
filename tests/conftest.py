@@ -13,6 +13,9 @@ from piglets import (
     LogicalPlan,
     LogicalPlanner,
     LogicalSteps,
+    Pruner,
+    SemanticLinker,
+    SemanticLinkingResult,
 )
 
 
@@ -151,7 +154,6 @@ def aggregate_logical_plan(
         num_samples=3,
     )
 
-
 @pytest.fixture
 def duckdb_database(duckdb_connector) -> Database:
     return duckdb_connector.get_database_schema()
@@ -160,3 +162,37 @@ def duckdb_database(duckdb_connector) -> Database:
 @pytest.fixture
 def bigquery_database(bigquery_connector) -> Database:
     return bigquery_connector.get_database_schema()
+
+@pytest.fixture
+def semantic_linker(model_name) -> SemanticLinker:
+    return SemanticLinker(model_name=model_name)
+
+@pytest.fixture
+def pruner(model_name) -> Pruner:
+    return Pruner(model_name=model_name)
+
+@pytest.fixture
+def pruned_duckdb_database(
+    pruner,
+    natural_language_query,
+    duckdb_database,
+    aggregate_logical_plan,
+) -> Database:
+    return pruner.dual_pathway_pruning(
+        natural_language_query=natural_language_query,
+        database=duckdb_database,
+        logical_plan=aggregate_logical_plan,
+    )
+
+@pytest.fixture
+def semantic_linking_result(
+    semantic_linker,
+    natural_language_query,
+    pruned_duckdb_database,
+    logical_plan,
+) -> SemanticLinkingResult:
+    return semantic_linker.link(
+        natural_language_query=natural_language_query,
+        database=pruned_duckdb_database,
+        logical_plan=logical_plan,
+    )

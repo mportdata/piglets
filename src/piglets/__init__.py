@@ -8,6 +8,7 @@ from .database import (
 from .planning import LogicalPlanner as LogicalPlanner
 from .policies import RuleMode as RuleMode
 from .policies import SemanticRules as SemanticRules
+from .profiling import Profiler as Profiler
 from .pruning import Pruner as Pruner
 from .semantic_linking import SemanticLinker as SemanticLinker
 from .types import (
@@ -20,6 +21,8 @@ from .types import (
     LogicalSteps as LogicalSteps,
     PreservationColumns as PreservationColumns,
     PreservationSet as PreservationSet,
+    ProfilingQuery as ProfilingQuery,
+    ProfilingQueries as ProfilingQueries,
     PruningColumns as PruningColumns,
     SemanticLinkingResult as SemanticLinkingResult,
     Table as Table,
@@ -55,7 +58,11 @@ __all__ = [
     "SemanticLinkingResult",
     "Table",
     # Pruning
-    "Pruner"
+    "Pruner",
+    # Profiling
+    "Profiler",
+    "ProfilingQuery",
+    "ProfilingQueries",
 ]
 
 

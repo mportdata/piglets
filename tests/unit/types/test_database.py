@@ -1,6 +1,18 @@
 from piglets.types import Column, Database, Table
 
 
+def test_table_columns_to_string_formats_columns_with_description_placeholder():
+    table = Table(
+        name="users",
+        columns=[
+            Column(name="id", data_type="INTEGER"),
+            Column(name="email", data_type="VARCHAR"),
+        ],
+    )
+
+    assert table.columns_to_string() == "id (INTEGER):\nemail (VARCHAR):"
+
+
 def test_database_subtract_removes_matching_tables_and_columns():
     source_database = Database(
         name="example",
