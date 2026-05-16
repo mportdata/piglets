@@ -13,6 +13,13 @@ class Table(BaseModel):
     name: str = Field(description="The name of the table.")
     columns: list[Column] = Field(description="The list of columns in the table.")
 
+    def columns_to_string(self) -> str:
+        """Export the table columns as one prompt-readable line per column."""
+        return "\n".join(
+            f"{column.name} ({column.data_type}):"
+            for column in self.columns
+        )
+
 class Database(BaseModel):
     """The schema of a database, including its name and tables."""
 

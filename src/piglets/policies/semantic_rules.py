@@ -23,11 +23,15 @@ class SemanticRules(BaseModel):
     metrics: RuleMode = RuleMode.STANDARD
     ambiguity: RuleMode = RuleMode.WARN
 
-    def to_string(self) -> str:
+    def critical_rules_to_string(self) -> str:
         prompts_dir = Path(__file__).resolve().parent / "prompts"
+        return read_markdown_file(prompts_dir / "critical_rules.md").strip()
+
+    def to_string(self) -> str:
         sections = [
-            read_markdown_file(prompts_dir / "critical_rules.md").strip(),
+            self.critical_rules_to_string(),
         ]
+        prompts_dir = Path(__file__).resolve().parent / "prompts"
 
         for domain, mode in (
             ("joins", self.joins),
