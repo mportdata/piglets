@@ -2,10 +2,15 @@ from piglets.policies import SemanticRules
 from piglets.profiling.profiler import Profiler
 from piglets.types import (
     Column,
+    Database,
     ProfilingQueries,
     ProfilingQuery,
+    QueryResult,
+    QueryResults,
     SemanticLinkingResult,
     Table,
+    TableProfileColumnResult,
+    TableProfileResult,
 )
 
 
@@ -20,8 +25,20 @@ class FakeProfilingLLM:
 
     def invoke(self, prompt):
         self.prompts.append(prompt)
+        if self.schema is TableProfileResult:
+            return TableProfileResult(
+                relevant=True,
+                relevant_columns=[
+                    TableProfileColumnResult(
+                        column_name="status",
+                        relevance_reason="Identifies cancelled orders.",
+                        observations="Values include cancelled.",
+                    )
+                ],
+                table_summary="Order table relevant to cancellation analysis.",
+            )
         return ProfilingQueries(
-            exploratory_queries=[
+            query=[
                 ProfilingQuery(
                     motivation="Check status values.",
                     query="SELECT DISTINCT status FROM orders LIMIT 10",
@@ -41,6 +58,14 @@ def _table() -> Table:
     )
 
 
+def _database(table: Table | None = None) -> Database:
+    return Database(
+        name="example",
+        database_type="DuckDB",
+        tables=[table or _table()],
+    )
+
+
 def _semantic_linking_result(table_name: str = "orders") -> SemanticLinkingResult:
     return SemanticLinkingResult(
         database_structure="Order database.",
@@ -51,7 +76,7 @@ def _semantic_linking_result(table_name: str = "orders") -> SemanticLinkingResul
     )
 
 
-def test_profile_table_uses_structured_output_and_returns_profiling_queries(monkeypatch):
+def test_generate_table_profiler_queries_uses_structured_output_and_returns_profiling_queries(monkeypatch):
     fake_llm = FakeProfilingLLM()
     init_calls = []
 
@@ -64,10 +89,13 @@ def test_profile_table_uses_structured_output_and_returns_profiling_queries(monk
         fake_init_chat_model,
     )
 
-    profiler = Profiler(model_name="test-model", model_provider="test-provider")
-    profiling_queries = profiler.profile_table(
+    profiler = Profiler(
+        model_name="test-model",
+        database=_database(),
+        model_provider="test-provider",
+    )
+    profiling_queries = profiler._generate_table_profiler_queries(
         natural_language_query="Which orders are cancelled?",
-        database_type="duckdb",
         table=_table(),
         semantic_linking_result=_semantic_linking_result(),
     )
@@ -75,12 +103,12 @@ def test_profile_table_uses_structured_output_and_returns_profiling_queries(monk
     assert init_calls == [("test-model", "test-provider")]
     assert fake_llm.schema is ProfilingQueries
     assert isinstance(profiling_queries, ProfilingQueries)
-    assert len(profiling_queries.exploratory_queries) == 1
-    assert profiling_queries.exploratory_queries[0].motivation
-    assert profiling_queries.exploratory_queries[0].query
+    assert len(profiling_queries.query) == 1
+    assert profiling_queries.query[0].motivation
+    assert profiling_queries.query[0].query
 
 
-def test_profile_table_prompt_uses_critical_rules_and_single_table_guidance(monkeypatch):
+def test_generate_table_profiler_queries_prompt_uses_critical_rules_and_single_table_guidance(monkeypatch):
     fake_llm = FakeProfilingLLM()
 
     monkeypatch.setattr(
@@ -88,10 +116,13 @@ def test_profile_table_prompt_uses_critical_rules_and_single_table_guidance(monk
         lambda model, model_provider=None: fake_llm,
     )
 
-    profiler = Profiler(model_name="test-model", rules=SemanticRules())
-    profiler.profile_table(
+    profiler = Profiler(
+        model_name="test-model",
+        database=_database(),
+        rules=SemanticRules(),
+    )
+    profiler._generate_table_profiler_queries(
         natural_language_query="Which orders are cancelled?",
-        database_type="duckdb",
         table=_table(),
         semantic_linking_result=_semantic_linking_result(),
     )
@@ -106,12 +137,12 @@ def test_profile_table_prompt_uses_critical_rules_and_single_table_guidance(monk
     assert "Prefer explicit primary-key and foreign-key relationships" not in prompt
     assert "Each query must profile only the target table, orders." in prompt
     assert "Do not join to, reference, or infer data from any other table." in prompt
-    assert "exploratory_queries" in prompt
-    assert "motivation" in prompt
+    assert "Generate 3-8 DUCKDB SQL queries to investigate." in prompt
     assert "query" in prompt
+    assert "motivation" in prompt
 
 
-def test_profile_table_prompt_uses_case_insensitive_table_function_lookup(monkeypatch):
+def test_generate_table_profiler_queries_prompt_uses_case_insensitive_table_function_lookup(monkeypatch):
     fake_llm = FakeProfilingLLM()
 
     monkeypatch.setattr(
@@ -119,17 +150,94 @@ def test_profile_table_prompt_uses_case_insensitive_table_function_lookup(monkey
         lambda model, model_provider=None: fake_llm,
     )
 
-    profiler = Profiler(model_name="test-model")
-    profiler.profile_table(
+    table = Table(
+        name="Orders",
+        columns=[
+            Column(name="status", data_type="VARCHAR"),
+        ],
+    )
+    profiler = Profiler(model_name="test-model", database=_database(table))
+    profiler._generate_table_profiler_queries(
         natural_language_query="Which orders are cancelled?",
-        database_type="duckdb",
-        table=Table(
-            name="Orders",
-            columns=[
-                Column(name="status", data_type="VARCHAR"),
-            ],
-        ),
+        table=table,
         semantic_linking_result=_semantic_linking_result(table_name="orders"),
     )
 
     assert "Contains order-level facts and status fields." in fake_llm.prompts[0]
+
+
+def test_generate_table_profiler_queries_uses_unknown_role_without_semantic_linking(monkeypatch):
+    fake_llm = FakeProfilingLLM()
+
+    monkeypatch.setattr(
+        "piglets.profiling.profiler.init_chat_model",
+        lambda model, model_provider=None: fake_llm,
+    )
+
+    profiler = Profiler(model_name="test-model", database=_database())
+    profiling_queries = profiler._generate_table_profiler_queries(
+        natural_language_query="Which orders are cancelled?",
+        table=_table(),
+    )
+
+    prompt = fake_llm.prompts[0]
+
+    assert isinstance(profiling_queries, ProfilingQueries)
+    assert "*** ANTICIPATED ROLE ***" in prompt
+    assert "This table was identified as: Unknown Role." in prompt
+
+
+def test_profile_table_can_be_called_without_semantic_linking(monkeypatch):
+    fake_llm = FakeProfilingLLM()
+
+    monkeypatch.setattr(
+        "piglets.profiling.profiler.init_chat_model",
+        lambda model, model_provider=None: fake_llm,
+    )
+
+    profiler = Profiler(model_name="test-model", database=_database())
+    profiling_queries = profiler._generate_table_profiler_queries(
+        natural_language_query="Which orders are cancelled?",
+        table=_table(),
+    )
+
+    assert isinstance(profiling_queries, ProfilingQueries)
+    assert "This table was identified as: Unknown Role." in fake_llm.prompts[0]
+
+
+def test_profile_table_from_query_results_uses_structured_output_and_evidence(monkeypatch):
+    fake_llm = FakeProfilingLLM()
+
+    monkeypatch.setattr(
+        "piglets.profiling.profiler.init_chat_model",
+        lambda model, model_provider=None: fake_llm,
+    )
+
+    profiler = Profiler(model_name="test-model", database=_database())
+    query_results = QueryResults(
+        query_results=[
+            QueryResult(
+                query="SELECT DISTINCT status FROM orders LIMIT 10",
+                columns=["status"],
+                rows=[("cancelled",), ("complete",)],
+                row_count=2,
+            )
+        ]
+    )
+
+    table_profile_result = profiler._profile_table_from_query_results(
+        natural_language_query="Which orders are cancelled?",
+        query_results=query_results,
+        table=_table(),
+    )
+
+    prompt = fake_llm.prompts[0]
+
+    assert fake_llm.schema is TableProfileResult
+    assert isinstance(table_profile_result, TableProfileResult)
+    assert table_profile_result.relevant is True
+    assert table_profile_result.relevant_columns
+    assert "*** EXPLORATION EVIDENCE ***" in prompt
+    assert query_results.to_string() in prompt
+    assert "Which orders are cancelled?" in prompt
+    assert "orders" in prompt

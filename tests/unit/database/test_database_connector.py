@@ -1,11 +1,16 @@
+import pytest
+
+from sqlalchemy import text
 from sqlalchemy.engine import URL
 
 from piglets.database.database_connector import (
     DatabaseConnector,
     database_name_from_connection,
     database_name_from_connection_string,
+    database_type_from_connection,
 )
 from piglets.database.url import BigQueryURL, DuckDBURL, MotherDuckURL, SnowflakeURL
+from piglets.types import ProfilingQuery, QueryResult, SQLQuery
 
 
 class FakeInspector:
@@ -80,6 +85,39 @@ def test_database_name_from_sqlalchemy_url():
     assert database_name_from_connection(connection) == "analytics.db"
 
 
+def test_database_type_from_known_connections():
+    assert (
+        database_type_from_connection(BigQueryURL(project_id="project", dataset="dataset"))
+        == "BigQuery"
+    )
+    assert (
+        database_type_from_connection(
+            SnowflakeURL(
+                account="account",
+                user="user",
+                password="password",
+                database="database",
+            )
+        )
+        == "Snowflake"
+    )
+    assert database_type_from_connection(DuckDBURL(database="analytics.db")) == "DuckDB"
+    assert database_type_from_connection(MotherDuckURL(database="analytics")) == "MotherDuck"
+    assert database_type_from_connection(URL.create(drivername="sqlite", database="example.db")) == "SQLite"
+    assert (
+        database_type_from_connection(
+            URL.create(drivername="postgresql+psycopg", database="analytics")
+        )
+        == "PostgreSQL"
+    )
+    assert (
+        database_type_from_connection(
+            URL.create(drivername="customdb+driver", database="analytics")
+        )
+        == "Customdb"
+    )
+
+
 def test_database_connector_accepts_url_builder(monkeypatch):
     monkeypatch.delenv("GOOGLE_CLOUD_PROJECT", raising=False)
     monkeypatch.delenv("GOOGLE_CLOUD_PROJECT_ID", raising=False)
@@ -96,6 +134,7 @@ def test_database_connector_accepts_url_builder(monkeypatch):
 
     assert created["connection"] == "bigquery://project/dataset"
     assert connector.database_name == "project:dataset"
+    assert connector.database_type == "BigQuery"
     assert isinstance(connector.inspector, FakeInspector)
 
 
@@ -160,6 +199,7 @@ def test_database_connector_accepts_connection_string(monkeypatch):
 
     assert created["connection"] == "duckdb:///analytics.db"
     assert connector.database_name == "analytics.db"
+    assert connector.database_type == "DuckDB"
 
 
 def test_database_connector_renders_sqlalchemy_url_object(monkeypatch):
@@ -177,3 +217,69 @@ def test_database_connector_renders_sqlalchemy_url_object(monkeypatch):
 
     assert created["connection"] == "duckdb:///analytics.db"
     assert connector.database_name == "analytics.db"
+    assert connector.database_type == "DuckDB"
+
+
+def test_database_connector_execute_query_accepts_string(tmp_path):
+    connector = _sqlite_connector_with_orders(tmp_path)
+
+    result = connector.execute_query(
+        "SELECT id, status FROM orders ORDER BY id"
+    )
+
+    assert isinstance(result, QueryResult)
+    assert result.query == "SELECT id, status FROM orders ORDER BY id"
+    assert result.columns == ["id", "status"]
+    assert result.rows == [(1, "open"), (2, "closed")]
+    assert result.row_count == 2
+
+
+def test_database_connector_execute_query_accepts_sql_query(tmp_path):
+    connector = _sqlite_connector_with_orders(tmp_path)
+
+    result = connector.execute_query(
+        SQLQuery(query="SELECT status FROM orders WHERE id = 1")
+    )
+
+    assert result.columns == ["status"]
+    assert result.rows == [("open",)]
+    assert result.row_count == 1
+
+
+def test_database_connector_execute_query_accepts_profiling_query(tmp_path):
+    connector = _sqlite_connector_with_orders(tmp_path)
+
+    result = connector.execute_query(
+        ProfilingQuery(
+            motivation="Check status values.",
+            query="SELECT DISTINCT status FROM orders ORDER BY status",
+        )
+    )
+
+    assert result.columns == ["status"]
+    assert result.rows == [("closed",), ("open",)]
+    assert result.row_count == 2
+
+
+def test_database_connector_execute_query_rejects_empty_query(tmp_path):
+    connector = _sqlite_connector_with_orders(tmp_path)
+
+    with pytest.raises(ValueError, match="query must not be empty"):
+        connector.execute_query("  ")
+
+
+def _sqlite_connector_with_orders(tmp_path):
+    db_path = tmp_path / "orders.db"
+    connector = DatabaseConnector(
+        connection=URL.create(drivername="sqlite", database=str(db_path))
+    )
+
+    with connector.engine.begin() as connection:
+        connection.execute(
+            text("CREATE TABLE orders (id INTEGER PRIMARY KEY, status TEXT)")
+        )
+        connection.execute(
+            text("INSERT INTO orders (id, status) VALUES (1, 'open'), (2, 'closed')")
+        )
+
+    return connector

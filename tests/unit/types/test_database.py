@@ -1,3 +1,6 @@
+import pytest
+from pydantic import ValidationError
+
 from piglets.types import Column, Database, Table
 
 
@@ -13,9 +16,15 @@ def test_table_columns_to_string_formats_columns_with_description_placeholder():
     assert table.columns_to_string() == "id (INTEGER):\nemail (VARCHAR):"
 
 
+def test_database_requires_database_type():
+    with pytest.raises(ValidationError):
+        Database(name="example", tables=[])
+
+
 def test_database_subtract_removes_matching_tables_and_columns():
     source_database = Database(
         name="example",
+        database_type="DuckDB",
         tables=[
             Table(
                 name="users",
@@ -44,6 +53,7 @@ def test_database_subtract_removes_matching_tables_and_columns():
     )
     database_to_subtract = Database(
         name="example",
+        database_type="DuckDB",
         tables=[
             Table(
                 name="users",
@@ -64,8 +74,10 @@ def test_database_subtract_removes_matching_tables_and_columns():
 
     remaining_database = source_database.subtract(database_to_subtract)
 
+    assert remaining_database.database_type == "DuckDB"
     assert remaining_database == Database(
         name="example",
+        database_type="DuckDB",
         tables=[
             Table(
                 name="users",
@@ -88,6 +100,7 @@ def test_database_subtract_removes_matching_tables_and_columns():
 def test_database_union_combines_tables_and_columns_without_duplicates():
     left_database = Database(
         name="example",
+        database_type="DuckDB",
         tables=[
             Table(
                 name="users",
@@ -107,6 +120,7 @@ def test_database_union_combines_tables_and_columns_without_duplicates():
     )
     right_database = Database(
         name="example",
+        database_type="DuckDB",
         tables=[
             Table(
                 name="users",
@@ -127,8 +141,10 @@ def test_database_union_combines_tables_and_columns_without_duplicates():
 
     union_database = left_database.union(right_database)
 
+    assert union_database.database_type == "DuckDB"
     assert union_database == Database(
         name="example",
+        database_type="DuckDB",
         tables=[
             Table(
                 name="users",

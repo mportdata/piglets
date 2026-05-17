@@ -12,16 +12,24 @@ from .database import (
     Database as Database,
     Table as Table,
 )
-from .profiling import (
-    ProfilingQuery as ProfilingQuery,
-    ProfilingQueries as ProfilingQueries,
-)
 from .pruning import (
     DeletionColumns as DeletionColumns,
     DeletionSet as DeletionSet,
     PreservationColumns as PreservationColumns,
     PreservationSet as PreservationSet,
-    PruningColumns as PruningColumns
+    PruningColumns as PruningColumns,
+)
+from .profiling import (
+    TableProfileColumnResult as TableProfileColumnResult,
+    TableProfileResult as TableProfileResult,
+)
+from .queries import (
+    ProfilingQuery as ProfilingQuery,
+    ProfilingQueries as ProfilingQueries,
+    QueryResult as QueryResult,
+    QueryResults as QueryResults,
+    SQLQueries as SQLQueries,
+    SQLQuery as SQLQuery,
 )
 
 __all__ = [
@@ -35,13 +43,20 @@ __all__ = [
     "Column",
     "Database",
     "Table",
-    # profiling types
-    "ProfilingQuery",
-    "ProfilingQueries",
     # pruning types
     "DeletionColumns",
     "DeletionSet",
     "PreservationColumns",
     "PreservationSet",
     "PruningColumns",
+    # query types
+    "ProfilingQuery",
+    "ProfilingQueries",
+    "QueryResult",
+    "QueryResults",
+    "SQLQueries",
+    "SQLQuery",
+    # profiling types
+    "TableProfileColumnResult",
+    "TableProfileResult",
 ]
