@@ -2,6 +2,7 @@ from .database_connector import (
     DatabaseConnector as DatabaseConnector,
     database_name_from_connection as database_name_from_connection,
     database_name_from_connection_string as database_name_from_connection_string,
+    database_type_from_connection as database_type_from_connection,
 )
 from .url import BigQueryURL as BigQueryURL, URL as URL
 
@@ -14,6 +15,7 @@ __all__ = [
     "URL",
     "database_name_from_connection",
     "database_name_from_connection_string",
+    "database_type_from_connection",
 ]
 
 

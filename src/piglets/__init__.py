@@ -4,6 +4,7 @@ from .database import (
     URL as URL,
     database_name_from_connection as database_name_from_connection,
     database_name_from_connection_string as database_name_from_connection_string,
+    database_type_from_connection as database_type_from_connection,
 )
 from .planning import LogicalPlanner as LogicalPlanner
 from .policies import RuleMode as RuleMode
@@ -23,8 +24,14 @@ from .types import (
     PreservationSet as PreservationSet,
     ProfilingQuery as ProfilingQuery,
     ProfilingQueries as ProfilingQueries,
+    QueryResult as QueryResult,
+    QueryResults as QueryResults,
     PruningColumns as PruningColumns,
     SemanticLinkingResult as SemanticLinkingResult,
+    SQLQueries as SQLQueries,
+    SQLQuery as SQLQuery,
+    TableProfileColumnResult as TableProfileColumnResult,
+    TableProfileResult as TableProfileResult,
     Table as Table,
 )
 
@@ -38,6 +45,7 @@ __all__ = [
     "URL",
     "database_name_from_connection",
     "database_name_from_connection_string",
+    "database_type_from_connection",
     "create_tpch_example_duckdb_db",
     # Planning
     "LogicalPlanner",
@@ -55,7 +63,13 @@ __all__ = [
     "PreservationColumns",
     "PreservationSet",
     "PruningColumns",
+    "QueryResult",
+    "QueryResults",
     "SemanticLinkingResult",
+    "SQLQueries",
+    "SQLQuery",
+    "TableProfileColumnResult",
+    "TableProfileResult",
     "Table",
     # Pruning
     "Pruner",

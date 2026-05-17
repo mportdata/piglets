@@ -77,6 +77,7 @@ def test_preservation_set_to_database_type(
 
     assert isinstance(preserved_database, Database)
     assert preserved_database.name == duckdb_database.name
+    assert preserved_database.database_type == duckdb_database.database_type
     assert isinstance(preserved_database.tables, list)
     assert all(isinstance(table, Table) for table in preserved_database.tables)
 
@@ -98,6 +99,7 @@ def test_deletion_set_to_database_type(
 
     assert isinstance(deleted_database, Database)
     assert deleted_database.name == duckdb_database.name
+    assert deleted_database.database_type == duckdb_database.database_type
     assert isinstance(deleted_database.tables, list)
     assert all(isinstance(table, Table) for table in deleted_database.tables)
 
@@ -115,3 +117,4 @@ def test_dual_pathway_pruning(
     )
 
     assert isinstance(pruned_database, Database)
+    assert pruned_database.database_type == duckdb_database.database_type

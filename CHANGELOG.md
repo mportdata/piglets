@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.16 - 2026-05-17
+
+### Added
+- Add typed SQL query and query result models, including prompt-readable result rendering.
+- Add query execution support to `DatabaseConnector`.
+- Add database type metadata to `Database` schemas.
+- Add table profile result models and end-to-end table profiling from generated queries through executed evidence.
+
+### Changed
+- Move profiling query outputs onto the shared SQL query model shape.
+- Make semantic linking optional for profiling while preserving the unknown-role fallback.
+- Require `Profiler` to be initialized with a `Database` so profiling prompts can use the database type.
+
 ## 0.1.15 - 2026-05-16
 
 ### Added

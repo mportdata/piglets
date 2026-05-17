@@ -39,7 +39,11 @@ class PreservationSet(BaseModel):
                     preserved_tables.append(
                         Table(name=table.name, columns=preserved_columns)
                     )
-        return Database(name=target_database.name, tables=preserved_tables)
+        return Database(
+            name=target_database.name,
+            database_type=target_database.database_type,
+            tables=preserved_tables,
+        )
 
 
 class DeletionColumns(PruningColumns):
@@ -71,4 +75,8 @@ class DeletionSet(BaseModel):
                     deleted_tables.append(
                         Table(name=table.name, columns=deleted_columns)
                     )
-        return Database(name=target_database.name, tables=deleted_tables)
+        return Database(
+            name=target_database.name,
+            database_type=target_database.database_type,
+            tables=deleted_tables,
+        )

@@ -24,6 +24,7 @@ class Database(BaseModel):
     """The schema of a database, including its name and tables."""
 
     name: str = Field(description="The name of the database.")
+    database_type: str = Field(description="The SQL database type or dialect.")
     tables: list[Table] = Field(description="The list of tables in the database.")
 
     def subtract(self, database_to_subtract):
@@ -40,7 +41,11 @@ class Database(BaseModel):
                 ]
                 if remaining_columns:
                     remaining_tables.append(Table(name=table.name, columns=remaining_columns))
-        return Database(name=self.name, tables=remaining_tables)
+        return Database(
+            name=self.name,
+            database_type=self.database_type,
+            tables=remaining_tables,
+        )
 
     def union(self, other_database):
         """Return a new Database containing all tables and columns from both databases without duplicates."""
@@ -70,11 +75,18 @@ class Database(BaseModel):
             if table.name not in table_names
         )
 
-        return Database(name=self.name, tables=union_tables)
+        return Database(
+            name=self.name,
+            database_type=self.database_type,
+            tables=union_tables,
+        )
 
     def export_as_string(self) -> str:
         """Export the database schema as a compact, readable string."""
-        lines = [f"Database: {self.name}"]
+        lines = [
+            f"Database: {self.name}",
+            f"Database Type: {self.database_type}",
+        ]
 
         for table in self.tables:
             columns = ", ".join(
