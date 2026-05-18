@@ -11,6 +11,7 @@
 - Execute generated profiling queries in parallel while preserving result order.
 - Profile database tables in parallel while preserving table order.
 - Avoid logging prompts, SQL text, natural-language questions, and row payloads from profiler workflows.
+- Change the project license from MIT to Apache License 2.0.
 
 ## 0.1.16 - 2026-05-17
 
