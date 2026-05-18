@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.18 - 2026-05-18
+
+### Added
+- Add profiler repair and retry handling for failed generated profiling SQL.
+- Add synthesis result types, including `SynthesisRound` and `SynthesisRunResult`.
+- Add iterative synthesis with default history output and exploration result feedback.
+- Add unit and integration coverage for synthesis and repaired profiling execution.
+
+### Changed
+- Stabilize profiling query execution integration coverage with deterministic DuckDB SQL.
+- Feed exploration query evidence back into follow-up synthesis prompts.
+
 ## 0.1.17 - 2026-05-18
 
 ### Added
