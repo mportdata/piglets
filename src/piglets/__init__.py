@@ -15,6 +15,7 @@ from .semantic_linking import SemanticLinker as SemanticLinker
 from .types import (
     AggregatePlan as AggregatePlan,
     Database as Database,
+    DatabaseProfileResult as DatabaseProfileResult,
     DeletionColumns as DeletionColumns,
     DeletionSet as DeletionSet,
     LogicalPlan as LogicalPlan,
@@ -55,6 +56,7 @@ __all__ = [
     # Types
     "AggregatePlan",
     "Database",
+    "DatabaseProfileResult",
     "DeletionColumns",
     "DeletionSet",
     "LogicalPlan",

@@ -1,3 +1,7 @@
+import logging
+import threading
+import time
+
 from piglets.policies import SemanticRules
 from piglets.profiling.profiler import Profiler
 from piglets.types import (
@@ -47,6 +51,52 @@ class FakeProfilingLLM:
         )
 
 
+class FakeParallelConnector:
+    def __init__(self):
+        self.barrier = threading.Barrier(2)
+
+    def execute_query(self, query):
+        self.barrier.wait(timeout=1)
+        if query.query == "SELECT 1":
+            time.sleep(0.05)
+
+        return QueryResult(
+            query=query.query,
+            columns=["value"],
+            rows=[(query.query,)],
+            row_count=1,
+        )
+
+
+class FakeParallelProfiler(Profiler):
+    def __init__(self, database):
+        super().__init__(model_name="test-model", database=database)
+        self.barrier = threading.Barrier(2)
+
+    def profile_table(
+        self,
+        natural_language_query,
+        table,
+        database_connector,
+        semantic_linking_result=None,
+    ):
+        self.barrier.wait(timeout=1)
+        if table.name == "orders":
+            time.sleep(0.05)
+
+        return TableProfileResult(
+            relevant=True,
+            relevant_columns=[
+                TableProfileColumnResult(
+                    column_name=table.columns[0].name,
+                    relevance_reason=f"{table.name} is relevant.",
+                    observations=f"{table.name} was profiled.",
+                )
+            ],
+            table_summary=f"{table.name} summary.",
+        )
+
+
 def _table() -> Table:
     return Table(
         name="orders",
@@ -63,6 +113,23 @@ def _database(table: Table | None = None) -> Database:
         name="example",
         database_type="DuckDB",
         tables=[table or _table()],
+    )
+
+
+def _two_table_database() -> Database:
+    return Database(
+        name="example",
+        database_type="DuckDB",
+        tables=[
+            _table(),
+            Table(
+                name="customers",
+                columns=[
+                    Column(name="customer_id", data_type="INTEGER"),
+                    Column(name="name", data_type="VARCHAR"),
+                ],
+            ),
+        ],
     )
 
 
@@ -241,3 +308,58 @@ def test_profile_table_from_query_results_uses_structured_output_and_evidence(mo
     assert query_results.to_string() in prompt
     assert "Which orders are cancelled?" in prompt
     assert "orders" in prompt
+
+
+def test_execute_table_profiling_queries_runs_queries_in_parallel_and_preserves_order(caplog):
+    caplog.set_level(logging.DEBUG, logger="piglets.profiling.profiler")
+    profiler = Profiler(model_name="test-model", database=_database())
+    profiling_queries = ProfilingQueries(
+        query=[
+            ProfilingQuery(motivation="First query.", query="SELECT 1"),
+            ProfilingQuery(motivation="Second query.", query="SELECT 2"),
+        ]
+    )
+
+    query_results = profiler._execute_table_profiling_queries(
+        database_connector=FakeParallelConnector(),
+        profiling_queries=profiling_queries,
+    )
+
+    assert isinstance(query_results, QueryResults)
+    assert [result.query for result in query_results.query_results] == [
+        "SELECT 1",
+        "SELECT 2",
+    ]
+    assert [result.rows for result in query_results.query_results] == [
+        [("SELECT 1",)],
+        [("SELECT 2",)],
+    ]
+    assert "Executing 2 profiling queries with 2 workers" in caplog.text
+    assert "Executed 2 profiling queries" in caplog.text
+    assert "SELECT 1" not in caplog.text
+    assert "SELECT 2" not in caplog.text
+
+
+def test_profile_database_profiles_tables_in_parallel_and_preserves_order(caplog):
+    caplog.set_level(logging.DEBUG, logger="piglets.profiling.profiler")
+    database = _two_table_database()
+    profiler = FakeParallelProfiler(database)
+
+    database_profile_result = profiler.profile_database(
+        database=database,
+        database_connector=object(),
+        natural_language_query="Which orders are cancelled?",
+    )
+
+    assert database_profile_result.database_type == "DuckDB"
+    assert database_profile_result.database_name == "example"
+    assert [
+        result.table_summary
+        for result in database_profile_result.table_profile_results
+    ] == [
+        "orders summary.",
+        "customers summary.",
+    ]
+    assert "Profiling database example with 2 tables" in caplog.text
+    assert "Profiling 2 database tables with 2 workers" in caplog.text
+    assert "Profiled database example with 2 table profiles" in caplog.text

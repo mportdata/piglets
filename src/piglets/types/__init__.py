@@ -20,6 +20,7 @@ from .pruning import (
     PruningColumns as PruningColumns,
 )
 from .profiling import (
+    DatabaseProfileResult as DatabaseProfileResult,
     TableProfileColumnResult as TableProfileColumnResult,
     TableProfileResult as TableProfileResult,
 )
@@ -57,6 +58,7 @@ __all__ = [
     "SQLQueries",
     "SQLQuery",
     # profiling types
+    "DatabaseProfileResult",
     "TableProfileColumnResult",
     "TableProfileResult",
 ]

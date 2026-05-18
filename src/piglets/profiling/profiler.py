@@ -1,16 +1,22 @@
+from concurrent.futures import ThreadPoolExecutor
+import logging
+
 from langchain.chat_models import init_chat_model
 
 from piglets.database import DatabaseConnector
 from piglets.policies import SemanticRules
 from piglets.types import (
     Database,
+    DatabaseProfileResult,
     ProfilingQueries,
-    QueryResult,
     QueryResults,
     SemanticLinkingResult,
     Table,
     TableProfileResult,
 )
+
+logger = logging.getLogger(__name__)
+
 
 class Profiler():
     def __init__(
@@ -31,6 +37,7 @@ class Profiler():
         table: Table,
         semantic_linking_result: SemanticLinkingResult | None = None,
     ) -> ProfilingQueries:
+        logger.debug("Generating profiling queries for table %s", table.name)
 
         llm = init_chat_model(model=self.model_name, model_provider=self.model_provider)
         llm = llm.with_structured_output(ProfilingQueries)
@@ -99,20 +106,40 @@ class Profiler():
         """
 
         profiling_queries = llm.invoke(DATA_PROFILE_QUERY_GENERATION_PROMPT)
+        logger.debug(
+            "Generated %s profiling queries for table %s",
+            len(profiling_queries.query),
+            table.name,
+        )
 
         return profiling_queries
 
-    # TODO: Parallel query execution
     def _execute_table_profiling_queries(
         self,
         database_connector: DatabaseConnector,
         profiling_queries: ProfilingQueries,  
     ) -> QueryResults:
-        query_results = QueryResults()
-        for profiling_query in profiling_queries.query:
-            query_result: QueryResult = database_connector.execute_query(profiling_query)
-            query_results.query_results.append(query_result)
-        return query_results
+        queries = list(profiling_queries.query)
+        if not queries:
+            logger.debug("No profiling queries to execute")
+            return QueryResults()
+
+        max_workers = min(len(queries), 8)
+        logger.debug(
+            "Executing %s profiling queries with %s workers",
+            len(queries),
+            max_workers,
+        )
+        try:
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                query_results = list(executor.map(database_connector.execute_query, queries))
+        except Exception:
+            logger.exception("Failed to execute profiling queries")
+            raise
+
+        logger.debug("Executed %s profiling queries", len(query_results))
+
+        return QueryResults(query_results=query_results)
 
     def _profile_table_from_query_results(
         self,
@@ -120,6 +147,7 @@ class Profiler():
         query_results: QueryResults,
         table: Table,
     ) -> TableProfileResult:
+        logger.debug("Profiling table %s from query results", table.name)
         llm = init_chat_model(model=self.model_name, model_provider=self.model_provider)
         llm = llm.with_structured_output(TableProfileResult)
 
@@ -176,6 +204,12 @@ class Profiler():
         """
         
         table_profile_result = llm.invoke(TABLE_PROFILE_PROMPT)
+        logger.debug(
+            "Profiled table %s from query results: relevant=%s, relevant_columns=%s",
+            table.name,
+            table_profile_result.relevant,
+            len(table_profile_result.relevant_columns),
+        )
 
         return table_profile_result
     
@@ -186,6 +220,7 @@ class Profiler():
             database_connector: DatabaseConnector,
             semantic_linking_result: SemanticLinkingResult | None = None,
     ) -> TableProfileResult:
+        logger.info("Profiling table %s", table.name)
         profiling_queries = self._generate_table_profiler_queries(
             natural_language_query=natural_language_query,
             table=table,
@@ -200,9 +235,61 @@ class Profiler():
             query_results=query_results,
             table=table,
         )
+        logger.info(
+            "Profiled table %s: relevant=%s, relevant_columns=%s",
+            table.name,
+            table_profile_result.relevant,
+            len(table_profile_result.relevant_columns),
+        )
         return table_profile_result
-    
-    #TODO profile self.database by profiling all of it's tables in parallel
-    # returning a list of TableProfileResults
-    #def profile_database(self) -> DatabaseProfileResult:
 
+    def profile_database(
+        self,
+        database: Database,
+        database_connector: DatabaseConnector,
+        natural_language_query: str,
+        semantic_linking_result: SemanticLinkingResult | None = None
+    ) -> DatabaseProfileResult:
+        logger.info(
+            "Profiling database %s with %s tables",
+            database.name,
+            len(database.tables),
+        )
+        database_profile_result = DatabaseProfileResult(
+            database_type=database.database_type,
+            database_name=database.name,
+        )
+        tables = list(database.tables)
+        if not tables:
+            logger.info("Profiled database %s with 0 table profiles", database.name)
+            return database_profile_result
+
+        max_workers = min(len(tables), 4)
+        logger.debug(
+            "Profiling %s database tables with %s workers",
+            len(tables),
+            max_workers,
+        )
+
+        def profile_table(table: Table) -> TableProfileResult:
+            return self.profile_table(
+                natural_language_query=natural_language_query,
+                table=table,
+                database_connector=database_connector,
+                semantic_linking_result=semantic_linking_result,
+            )
+
+        try:
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                table_profile_results = list(executor.map(profile_table, tables))
+        except Exception:
+            logger.exception("Failed to profile database %s", database.name)
+            raise
+
+        database_profile_result.table_profile_results.extend(table_profile_results)
+        logger.info(
+            "Profiled database %s with %s table profiles",
+            database.name,
+            len(database_profile_result.table_profile_results),
+        )
+        return database_profile_result
