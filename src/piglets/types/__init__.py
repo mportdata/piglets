@@ -32,6 +32,14 @@ from .queries import (
     SQLQueries as SQLQueries,
     SQLQuery as SQLQuery,
 )
+from .synthesis import (
+    RefinedSchemaColumn as RefinedSchemaColumn,
+    RefinedSchemaTable as RefinedSchemaTable,
+    RejectedCandidate as RejectedCandidate,
+    SynthesisRound as SynthesisRound,
+    SynthesisResult as SynthesisResult,
+    SynthesisRunResult as SynthesisRunResult,
+)
 
 __all__ = [
     # plan types
@@ -61,4 +69,11 @@ __all__ = [
     "DatabaseProfileResult",
     "TableProfileColumnResult",
     "TableProfileResult",
+    # synthesis types
+    "RefinedSchemaColumn",
+    "RefinedSchemaTable",
+    "RejectedCandidate",
+    "SynthesisRound",
+    "SynthesisResult",
+    "SynthesisRunResult",
 ]

@@ -9,6 +9,8 @@ from piglets.types import (
     Database,
     DatabaseProfileResult,
     ProfilingQueries,
+    ProfilingQuery,
+    QueryResult,
     QueryResults,
     SemanticLinkingResult,
     Table,
@@ -25,11 +27,18 @@ class Profiler():
         database: Database,
         model_provider: str = None,
         rules: SemanticRules | None = None,
+        max_query_repair_attempts: int = 1,
     ):
+        if max_query_repair_attempts < 0:
+            raise ValueError(
+                "max_query_repair_attempts must be greater than or equal to 0"
+            )
+
         self.model_name = model_name
         self.database = database
         self.model_provider = model_provider
         self.rules = rules or SemanticRules()
+        self.max_query_repair_attempts = max_query_repair_attempts
 
     def _generate_table_profiler_queries(
         self,
@@ -114,32 +123,158 @@ class Profiler():
 
         return profiling_queries
 
+    @staticmethod
+    def _execute_indexed_profiling_query(
+        database_connector: DatabaseConnector,
+        indexed_query: tuple[int, ProfilingQuery],
+    ) -> tuple[int, ProfilingQuery, QueryResult | None, Exception | None]:
+        index, query = indexed_query
+        try:
+            query_result = database_connector.execute_query(query)
+        except Exception as error:
+            return index, query, None, error
+
+        return index, query, query_result, None
+
+    def _repair_profiling_query(
+        self,
+        natural_language_query: str,
+        table: Table,
+        failed_query: ProfilingQuery,
+        error: Exception,
+    ) -> ProfilingQuery:
+        logger.debug("Repairing profiling query for table %s", table.name)
+        llm = init_chat_model(model=self.model_name, model_provider=self.model_provider)
+        llm = llm.with_structured_output(ProfilingQuery)
+        sql_type = f"{self.database.database_type.upper()} SQL"
+
+        QUERY_REPAIR_PROMPT = f"""
+            *** TASK CONTEXT ***
+            A generated profiling query failed during execution. Repair the
+            SQL while preserving the original profiling intent.
+
+            *** SQL DIALECT ***
+            {sql_type}
+
+            *** TARGET TABLE: {table.name} ***
+            Columns:
+            {table.columns_to_string()}
+
+            *** USER QUESTION ***
+            {natural_language_query}
+
+            *** ORIGINAL MOTIVATION ***
+            {failed_query.motivation}
+
+            *** FAILED QUERY ***
+            {failed_query.query}
+
+            *** DATABASE ERROR ***
+            {type(error).__name__}: {error}
+
+            *** REPAIR RULES ***
+            Return exactly one valid {sql_type} query.
+            The query must profile only the target table, {table.name}.
+            Do not join to, reference, or infer data from any other table.
+            Use only columns listed in the target table schema.
+            Preserve the original motivation unless it is no longer accurate.
+            Do not wrap the query in markdown fences.
+
+            *** OUTPUT FORMAT ***
+            Return structured data matching the ProfilingQuery schema:
+            - motivation: a concise reason for running the repaired query.
+            - query: the repaired {sql_type} query string.
+        """
+
+        return llm.invoke(QUERY_REPAIR_PROMPT)
+
     def _execute_table_profiling_queries(
         self,
         database_connector: DatabaseConnector,
-        profiling_queries: ProfilingQueries,  
+        profiling_queries: ProfilingQueries,
+        natural_language_query: str,
+        table: Table,
     ) -> QueryResults:
         queries = list(profiling_queries.query)
         if not queries:
             logger.debug("No profiling queries to execute")
             return QueryResults()
 
-        max_workers = min(len(queries), 8)
+        query_results: list[QueryResult | None] = [None] * len(queries)
+        pending_queries = list(enumerate(queries))
+        repair_attempt = 0
         logger.debug(
             "Executing %s profiling queries with %s workers",
             len(queries),
-            max_workers,
+            min(len(queries), 8),
         )
-        try:
+
+        while pending_queries:
+            max_workers = min(len(pending_queries), 8)
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                query_results = list(executor.map(database_connector.execute_query, queries))
-        except Exception:
-            logger.exception("Failed to execute profiling queries")
-            raise
+                executions = list(
+                    executor.map(
+                        lambda indexed_query: self._execute_indexed_profiling_query(
+                            database_connector,
+                            indexed_query,
+                        ),
+                        pending_queries,
+                    )
+                )
 
-        logger.debug("Executed %s profiling queries", len(query_results))
+            failed_queries: list[tuple[int, ProfilingQuery, Exception]] = []
+            for index, query, query_result, error in executions:
+                if error is None and query_result is not None:
+                    query_results[index] = query_result
+                elif error is not None:
+                    failed_queries.append((index, query, error))
 
-        return QueryResults(query_results=query_results)
+            if not failed_queries:
+                break
+
+            if repair_attempt >= self.max_query_repair_attempts:
+                logger.error(
+                    "Failed to execute profiling query for table %s after %s repair attempts: %s",
+                    table.name,
+                    repair_attempt,
+                    type(failed_queries[0][2]).__name__,
+                )
+                raise failed_queries[0][2]
+
+            repair_attempt += 1
+            logger.warning(
+                "Repairing %s failed profiling queries for table %s, attempt %s of %s",
+                len(failed_queries),
+                table.name,
+                repair_attempt,
+                self.max_query_repair_attempts,
+            )
+            pending_queries = [
+                (
+                    index,
+                    self._repair_profiling_query(
+                        natural_language_query=natural_language_query,
+                        table=table,
+                        failed_query=query,
+                        error=error,
+                    ),
+                )
+                for index, query, error in failed_queries
+            ]
+
+        executed_query_results = [
+            query_result
+            for query_result in query_results
+            if query_result is not None
+        ]
+        if len(executed_query_results) != len(queries):
+            raise RuntimeError(
+                "Profiling query execution completed with missing results"
+            )
+
+        logger.debug("Executed %s profiling queries", len(executed_query_results))
+
+        return QueryResults(query_results=executed_query_results)
 
     def _profile_table_from_query_results(
         self,
@@ -169,6 +304,7 @@ class Profiler():
             needed for aggregation (e.g., score for AVG, price for
             SUM).
             *** OUTPUT GUIDELINES ***
+            - table_name: The exact target table name, {table.name}.
             - relevant: Whether this table is relevant to the user question.
             - relevant_columns: Columns relevant to the user question.
             - column_name: The relevant column name.
@@ -178,6 +314,7 @@ class Profiler():
             represents in the context of the query.
             *** OUTPUT FORMAT ***
             Return structured data matching the TableProfileResult schema:
+            - table_name: string.
             - relevant: boolean.
             - relevant_columns: list of TableProfileColumnResult objects.
             - Each relevant_columns item must contain:
@@ -189,6 +326,7 @@ class Profiler():
             Example shape:
             ```json
                 {{
+                    "table_name": "{table.name}",
                     "relevant": true,
                     "relevant_columns": [
                         {{
@@ -204,6 +342,7 @@ class Profiler():
         """
         
         table_profile_result = llm.invoke(TABLE_PROFILE_PROMPT)
+        table_profile_result.table_name = table.name
         logger.debug(
             "Profiled table %s from query results: relevant=%s, relevant_columns=%s",
             table.name,
@@ -228,7 +367,9 @@ class Profiler():
         )
         query_results = self._execute_table_profiling_queries(
             database_connector=database_connector,
-            profiling_queries=profiling_queries, 
+            profiling_queries=profiling_queries,
+            natural_language_query=natural_language_query,
+            table=table,
         )
         table_profile_result = self._profile_table_from_query_results(
             natural_language_query=natural_language_query,
