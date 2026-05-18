@@ -6,6 +6,7 @@ from piglets import (
     DatabaseProfileResult,
     Profiler,
     ProfilingQueries,
+    ProfilingQuery,
     QueryResult,
     QueryResults,
     Table,
@@ -56,15 +57,35 @@ def test_executetable_profiling_queries(
     semantic_linking_result,
     duckdb_connector,
 ):
-    profiling_queries = profiler._generate_table_profiler_queries(
-        natural_language_query=natural_language_query,
-        table=table,
-        semantic_linking_result=semantic_linking_result
+    profiling_queries = ProfilingQueries(
+        query=[
+            ProfilingQuery(
+                motivation="Count rows in the target table.",
+                query=f"SELECT COUNT(*) AS row_count FROM {table.name}",
+            ),
+            ProfilingQuery(
+                motivation="Check distinct orders represented by line items.",
+                query=(
+                    f"SELECT COUNT(DISTINCT l_orderkey) AS distinct_orders "
+                    f"FROM {table.name}"
+                ),
+            ),
+            ProfilingQuery(
+                motivation="Inspect shipment date coverage.",
+                query=(
+                    "SELECT MIN(l_shipdate) AS min_shipdate, "
+                    "MAX(l_shipdate) AS max_shipdate "
+                    f"FROM {table.name}"
+                ),
+            ),
+        ]
     )
 
     query_results: QueryResults = profiler._execute_table_profiling_queries(
         database_connector=duckdb_connector,
         profiling_queries=profiling_queries,
+        natural_language_query=natural_language_query,
+        table=table,
     )
 
     assert isinstance(query_results, QueryResults)

@@ -2,6 +2,8 @@ import logging
 import threading
 import time
 
+import pytest
+
 from piglets.policies import SemanticRules
 from piglets.profiling.profiler import Profiler
 from piglets.types import (
@@ -31,6 +33,7 @@ class FakeProfilingLLM:
         self.prompts.append(prompt)
         if self.schema is TableProfileResult:
             return TableProfileResult(
+                table_name="llm_table_name",
                 relevant=True,
                 relevant_columns=[
                     TableProfileColumnResult(
@@ -41,6 +44,11 @@ class FakeProfilingLLM:
                 ],
                 table_summary="Order table relevant to cancellation analysis.",
             )
+        if self.schema is ProfilingQuery:
+            return ProfilingQuery(
+                motivation="Repair status values.",
+                query="SELECT status FROM orders LIMIT 10",
+            )
         return ProfilingQueries(
             query=[
                 ProfilingQuery(
@@ -48,6 +56,28 @@ class FakeProfilingLLM:
                     query="SELECT DISTINCT status FROM orders LIMIT 10",
                 )
             ]
+        )
+
+
+class FakeRepairConnector:
+    def __init__(self, failures_by_query):
+        self.failures_by_query = {
+            query: list(errors)
+            for query, errors in failures_by_query.items()
+        }
+        self.queries = []
+
+    def execute_query(self, query):
+        self.queries.append(query.query)
+        errors = self.failures_by_query.get(query.query, [])
+        if errors:
+            raise errors.pop(0)
+
+        return QueryResult(
+            query=query.query,
+            columns=["value"],
+            rows=[(query.query,)],
+            row_count=1,
         )
 
 
@@ -85,6 +115,7 @@ class FakeParallelProfiler(Profiler):
             time.sleep(0.05)
 
         return TableProfileResult(
+            table_name=table.name,
             relevant=True,
             relevant_columns=[
                 TableProfileColumnResult(
@@ -302,6 +333,7 @@ def test_profile_table_from_query_results_uses_structured_output_and_evidence(mo
 
     assert fake_llm.schema is TableProfileResult
     assert isinstance(table_profile_result, TableProfileResult)
+    assert table_profile_result.table_name == "orders"
     assert table_profile_result.relevant is True
     assert table_profile_result.relevant_columns
     assert "*** EXPLORATION EVIDENCE ***" in prompt
@@ -323,6 +355,8 @@ def test_execute_table_profiling_queries_runs_queries_in_parallel_and_preserves_
     query_results = profiler._execute_table_profiling_queries(
         database_connector=FakeParallelConnector(),
         profiling_queries=profiling_queries,
+        natural_language_query="Which orders are cancelled?",
+        table=_table(),
     )
 
     assert isinstance(query_results, QueryResults)
@@ -340,6 +374,169 @@ def test_execute_table_profiling_queries_runs_queries_in_parallel_and_preserves_
     assert "SELECT 2" not in caplog.text
 
 
+def test_execute_table_profiling_queries_repairs_failed_query_and_preserves_order(monkeypatch):
+    fake_llm = FakeProfilingLLM()
+    monkeypatch.setattr(
+        "piglets.profiling.profiler.init_chat_model",
+        lambda model, model_provider=None: fake_llm,
+    )
+    profiler = Profiler(model_name="test-model", database=_database())
+    connector = FakeRepairConnector(
+        failures_by_query={
+            "SELECT broken": [ValueError("Binder Error: invalid column")],
+        }
+    )
+    profiling_queries = ProfilingQueries(
+        query=[
+            ProfilingQuery(motivation="First query.", query="SELECT 1"),
+            ProfilingQuery(motivation="Broken query.", query="SELECT broken"),
+            ProfilingQuery(motivation="Third query.", query="SELECT 3"),
+        ]
+    )
+
+    query_results = profiler._execute_table_profiling_queries(
+        database_connector=connector,
+        profiling_queries=profiling_queries,
+        natural_language_query="Which orders are cancelled?",
+        table=_table(),
+    )
+
+    assert [result.query for result in query_results.query_results] == [
+        "SELECT 1",
+        "SELECT status FROM orders LIMIT 10",
+        "SELECT 3",
+    ]
+    assert sorted(connector.queries[:3]) == [
+        "SELECT 1",
+        "SELECT 3",
+        "SELECT broken",
+    ]
+    assert connector.queries[3:] == ["SELECT status FROM orders LIMIT 10"]
+    assert fake_llm.schema is ProfilingQuery
+
+
+def test_repair_profiling_query_prompt_contains_failed_query_context(monkeypatch):
+    fake_llm = FakeProfilingLLM()
+    monkeypatch.setattr(
+        "piglets.profiling.profiler.init_chat_model",
+        lambda model, model_provider=None: fake_llm,
+    )
+    profiler = Profiler(model_name="test-model", database=_database())
+    connector = FakeRepairConnector(
+        failures_by_query={
+            "SELECT broken": [ValueError("Binder Error: invalid column")],
+        }
+    )
+
+    profiler._execute_table_profiling_queries(
+        database_connector=connector,
+        profiling_queries=ProfilingQueries(
+            query=[
+                ProfilingQuery(
+                    motivation="Inspect order status.",
+                    query="SELECT broken",
+                )
+            ]
+        ),
+        natural_language_query="Which orders are cancelled?",
+        table=_table(),
+    )
+
+    prompt = fake_llm.prompts[0]
+
+    assert "*** SQL DIALECT ***" in prompt
+    assert "DUCKDB SQL" in prompt
+    assert "*** TARGET TABLE: orders ***" in prompt
+    assert "order_id (INTEGER):" in prompt
+    assert "status (VARCHAR):" in prompt
+    assert "Which orders are cancelled?" in prompt
+    assert "Inspect order status." in prompt
+    assert "SELECT broken" in prompt
+    assert "Binder Error: invalid column" in prompt
+    assert "The query must profile only the target table, orders." in prompt
+
+
+def test_execute_table_profiling_queries_raises_after_repair_attempts_exhausted(monkeypatch):
+    fake_llm = FakeProfilingLLM()
+    monkeypatch.setattr(
+        "piglets.profiling.profiler.init_chat_model",
+        lambda model, model_provider=None: fake_llm,
+    )
+    profiler = Profiler(
+        model_name="test-model",
+        database=_database(),
+        max_query_repair_attempts=1,
+    )
+    connector = FakeRepairConnector(
+        failures_by_query={
+            "SELECT broken": [ValueError("Binder Error: invalid column")],
+            "SELECT status FROM orders LIMIT 10": [
+                ValueError("Binder Error: still invalid"),
+            ],
+        }
+    )
+
+    with pytest.raises(ValueError, match="still invalid"):
+        profiler._execute_table_profiling_queries(
+            database_connector=connector,
+            profiling_queries=ProfilingQueries(
+                query=[
+                    ProfilingQuery(
+                        motivation="Inspect order status.",
+                        query="SELECT broken",
+                    )
+                ]
+            ),
+            natural_language_query="Which orders are cancelled?",
+            table=_table(),
+        )
+
+    assert connector.queries == [
+        "SELECT broken",
+        "SELECT status FROM orders LIMIT 10",
+    ]
+
+
+def test_execute_table_profiling_queries_does_not_repair_when_disabled(monkeypatch):
+    init_calls = []
+
+    def fake_init_chat_model(model, model_provider=None):
+        init_calls.append((model, model_provider))
+        return FakeProfilingLLM()
+
+    monkeypatch.setattr(
+        "piglets.profiling.profiler.init_chat_model",
+        fake_init_chat_model,
+    )
+    profiler = Profiler(
+        model_name="test-model",
+        database=_database(),
+        max_query_repair_attempts=0,
+    )
+    connector = FakeRepairConnector(
+        failures_by_query={
+            "SELECT broken": [ValueError("Binder Error: invalid column")],
+        }
+    )
+
+    with pytest.raises(ValueError, match="invalid column"):
+        profiler._execute_table_profiling_queries(
+            database_connector=connector,
+            profiling_queries=ProfilingQueries(
+                query=[
+                    ProfilingQuery(
+                        motivation="Inspect order status.",
+                        query="SELECT broken",
+                    )
+                ]
+            ),
+            natural_language_query="Which orders are cancelled?",
+            table=_table(),
+        )
+
+    assert init_calls == []
+
+
 def test_profile_database_profiles_tables_in_parallel_and_preserves_order(caplog):
     caplog.set_level(logging.DEBUG, logger="piglets.profiling.profiler")
     database = _two_table_database()
@@ -353,6 +550,13 @@ def test_profile_database_profiles_tables_in_parallel_and_preserves_order(caplog
 
     assert database_profile_result.database_type == "DuckDB"
     assert database_profile_result.database_name == "example"
+    assert [
+        result.table_name
+        for result in database_profile_result.table_profile_results
+    ] == [
+        "orders",
+        "customers",
+    ]
     assert [
         result.table_summary
         for result in database_profile_result.table_profile_results

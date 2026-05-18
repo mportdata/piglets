@@ -12,6 +12,7 @@ from .policies import SemanticRules as SemanticRules
 from .profiling import Profiler as Profiler
 from .pruning import Pruner as Pruner
 from .semantic_linking import SemanticLinker as SemanticLinker
+from .synthesizing import Synthesizer as Synthesizer
 from .types import (
     AggregatePlan as AggregatePlan,
     Database as Database,
@@ -28,9 +29,15 @@ from .types import (
     QueryResult as QueryResult,
     QueryResults as QueryResults,
     PruningColumns as PruningColumns,
+    RefinedSchemaColumn as RefinedSchemaColumn,
+    RefinedSchemaTable as RefinedSchemaTable,
+    RejectedCandidate as RejectedCandidate,
     SemanticLinkingResult as SemanticLinkingResult,
     SQLQueries as SQLQueries,
     SQLQuery as SQLQuery,
+    SynthesisRound as SynthesisRound,
+    SynthesisResult as SynthesisResult,
+    SynthesisRunResult as SynthesisRunResult,
     TableProfileColumnResult as TableProfileColumnResult,
     TableProfileResult as TableProfileResult,
     Table as Table,
@@ -67,9 +74,15 @@ __all__ = [
     "PruningColumns",
     "QueryResult",
     "QueryResults",
+    "RefinedSchemaColumn",
+    "RefinedSchemaTable",
+    "RejectedCandidate",
     "SemanticLinkingResult",
     "SQLQueries",
     "SQLQuery",
+    "SynthesisRound",
+    "SynthesisResult",
+    "SynthesisRunResult",
     "TableProfileColumnResult",
     "TableProfileResult",
     "Table",
@@ -79,6 +92,8 @@ __all__ = [
     "Profiler",
     "ProfilingQuery",
     "ProfilingQueries",
+    # Synthesizing
+    "Synthesizer"
 ]
 
 
