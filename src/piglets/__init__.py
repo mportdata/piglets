@@ -8,8 +8,8 @@ from .database import (
 )
 from .capabilities.hypothesis_generation import (
     HypothesisGenerator as HypothesisGenerator,
+    LogicalPlanner as LogicalPlanner,
 )
-from .planning import LogicalPlanner as LogicalPlanner
 from .policies import RuleMode as RuleMode
 from .policies import SemanticRules as SemanticRules
 from .profiling import Profiler as Profiler

@@ -17,10 +17,6 @@ from piglets.capabilities.hypothesis_generation import (
 from piglets.capabilities.hypothesis_generation.techniques.logical_planning import (
     logical_planner as capability_logical_planner,
 )
-from piglets.planning import LogicalPlanner as PlanningLogicalPlanner
-from piglets.planning.logical_planning import (
-    LogicalPlanner as LogicalPlanningLogicalPlanner,
-)
 from piglets.types import plans
 
 
@@ -30,10 +26,8 @@ def test_logical_planner_prompt_is_available():
     assert prompt_path.is_file()
 
 
-def test_logical_planner_compatibility_imports_resolve_to_same_class():
+def test_logical_planner_imports_resolve_to_capability_class():
     assert LogicalPlanner is CapabilityLogicalPlanner
-    assert LogicalPlanner is PlanningLogicalPlanner
-    assert LogicalPlanner is LogicalPlanningLogicalPlanner
 
 
 def test_hypothesis_generator_protocol_is_exported():
