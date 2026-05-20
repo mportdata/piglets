@@ -5,8 +5,10 @@ from .plans import (
     LogicalSteps as LogicalSteps,
 )
 from .artifacts import (
+    Hypothesis as Hypothesis,
     Question as Question,
     SearchSpace as SearchSpace,
+    WorkflowContext as WorkflowContext,
 )
 from .linking import (
     SemanticLinkingResult as SemanticLinkingResult,
@@ -51,8 +53,10 @@ __all__ = [
     "LogicalPlan",
     "LogicalPlans",
     "LogicalSteps",
+    "Hypothesis",
     "Question",
     "SearchSpace",
+    "WorkflowContext",
     "SemanticLinkingResult",
     # database types
     "ColumnSchema",

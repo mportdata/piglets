@@ -6,6 +6,9 @@ from .database import (
     database_name_from_connection_string as database_name_from_connection_string,
     database_type_from_connection as database_type_from_connection,
 )
+from .capabilities.hypothesis_generation import (
+    HypothesisGenerator as HypothesisGenerator,
+)
 from .planning import LogicalPlanner as LogicalPlanner
 from .policies import RuleMode as RuleMode
 from .policies import SemanticRules as SemanticRules
@@ -13,6 +16,12 @@ from .profiling import Profiler as Profiler
 from .pruning import Pruner as Pruner
 from .semantic_linking import SemanticLinker as SemanticLinker
 from .synthesizing import Synthesizer as Synthesizer
+from .workflows import (
+    GenerateHypothesis as GenerateHypothesis,
+    LoadSearchSpace as LoadSearchSpace,
+    WorkflowRunner as WorkflowRunner,
+    WorkflowStage as WorkflowStage,
+)
 from .types import (
     AggregatePlan as AggregatePlan,
     ColumnSchema as ColumnSchema,
@@ -20,6 +29,7 @@ from .types import (
     DatabaseProfileResult as DatabaseProfileResult,
     DeletionColumns as DeletionColumns,
     DeletionSet as DeletionSet,
+    Hypothesis as Hypothesis,
     LogicalPlan as LogicalPlan,
     LogicalPlans as LogicalPlans,
     LogicalSteps as LogicalSteps,
@@ -44,6 +54,7 @@ from .types import (
     TableProfileColumnResult as TableProfileColumnResult,
     TableProfileResult as TableProfileResult,
     TableSchema as TableSchema,
+    WorkflowContext as WorkflowContext,
 )
 
 __all__ = [
@@ -59,10 +70,15 @@ __all__ = [
     "database_type_from_connection",
     "create_tpch_example_duckdb_db",
     # Planning
+    "HypothesisGenerator",
     "LogicalPlanner",
     "SemanticLinker",
     "RuleMode",
     "SemanticRules",
+    "GenerateHypothesis",
+    "LoadSearchSpace",
+    "WorkflowRunner",
+    "WorkflowStage",
     # Types
     "AggregatePlan",
     "ColumnSchema",
@@ -70,6 +86,7 @@ __all__ = [
     "DatabaseProfileResult",
     "DeletionColumns",
     "DeletionSet",
+    "Hypothesis",
     "LogicalPlan",
     "LogicalPlans",
     "LogicalSteps",
@@ -92,6 +109,7 @@ __all__ = [
     "TableProfileColumnResult",
     "TableProfileResult",
     "TableSchema",
+    "WorkflowContext",
     # Pruning
     "Pruner",
     # Profiling
