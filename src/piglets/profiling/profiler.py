@@ -43,10 +43,13 @@ class Profiler():
 
         self.model_name = model_name
         self.search_space = search_space
-        self.database_schema = _database_schema_from_search_space(search_space)
         self.model_provider = model_provider
         self.rules = rules or SemanticRules()
         self.max_query_repair_attempts = max_query_repair_attempts
+
+    @property
+    def database_schema(self):
+        return _database_schema_from_search_space(self.search_space)
 
     def _generate_table_profiler_queries(
         self,

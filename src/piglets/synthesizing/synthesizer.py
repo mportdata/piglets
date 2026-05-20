@@ -33,10 +33,13 @@ class Synthesizer():
             model_provider: str | None,
     ):
         self.search_space: SearchSpace = search_space
-        self.database_schema = _database_schema_from_search_space(search_space)
         self.database_connector: DatabaseConnector = database_connector
         self.model_name: str = model_name
         self.model_provider = model_provider
+
+    @property
+    def database_schema(self):
+        return _database_schema_from_search_space(self.search_space)
 
     def _build_synthesis_prompt(
         self,
