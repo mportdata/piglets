@@ -2,7 +2,14 @@ from concurrent.futures import ThreadPoolExecutor
 from langchain.chat_models import init_chat_model
 from pathlib import Path
 
-from piglets.types import AggregatePlan, LogicalPlan, LogicalPlans, LogicalSteps, Question
+from piglets.types import (
+    AggregatePlan,
+    Hypothesis,
+    LogicalPlan,
+    LogicalPlans,
+    LogicalSteps,
+    Question,
+)
 from piglets.utils import read_markdown_file
 
 
@@ -60,3 +67,14 @@ class LogicalPlanner():
                 model_name=self.model_name,
                 model_provider=self.model_provider,
             )
+
+    def generate(self, question: Question) -> Hypothesis:
+        logical_plan = self.plan(question=question)
+        return Hypothesis(
+            question=question,
+            content=logical_plan.export_as_string(),
+            technique="logical_planning",
+            technique_parameters={
+                "num_samples": self.num_samples,
+            },
+        )
