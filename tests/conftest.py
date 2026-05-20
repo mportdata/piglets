@@ -8,12 +8,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from piglets import (
     AggregatePlan,
-    Database,
+    DatabaseSchema,
     DatabaseConnector,
     LogicalPlan,
     LogicalPlanner,
     LogicalSteps,
     Pruner,
+    Question,
+    SearchSpace,
     SemanticLinker,
     SemanticLinkingResult,
 )
@@ -46,11 +48,13 @@ def model_name() -> str:
     return "gpt-5.2"
 
 @pytest.fixture
-def natural_language_query() -> str:
-    return (
-        "Which manufacturers saw the largest increase in average revenue per "
-        "order between 1996 and 1997, considering only manufacturers with at "
-        "least 100 orders in both years, and excluding cancelled orders?"
+def question() -> Question:
+    return Question(
+        natural_language_question=(
+            "Which manufacturers saw the largest increase in average revenue per "
+            "order between 1996 and 1997, considering only manufacturers with at "
+            "least 100 orders in both years, and excluding cancelled orders?"
+        )
     )
 
 @pytest.fixture
@@ -135,33 +139,42 @@ def snowflake_connector():
 
 @pytest.fixture
 def logical_plan(
-    natural_language_query: str,
+    question: Question,
     logical_planner: LogicalPlanner,
 ) -> LogicalPlan:
     return logical_planner.plan(
-        natural_language_query=natural_language_query,
-        num_samples=1,
+        question=question,
     )
 
 
 @pytest.fixture
 def aggregate_logical_plan(
-    natural_language_query: str,
-    logical_planner: LogicalPlanner,
+    question: Question,
+    model_name: str,
 ) -> AggregatePlan:
+    logical_planner = LogicalPlanner(model_name, num_samples=3)
     return logical_planner.plan(
-        natural_language_query=natural_language_query,
-        num_samples=3,
+        question=question,
     )
 
 @pytest.fixture
-def duckdb_database(duckdb_connector) -> Database:
+def duckdb_database_schema(duckdb_connector) -> DatabaseSchema:
     return duckdb_connector.get_database_schema()
 
 
 @pytest.fixture
-def bigquery_database(bigquery_connector) -> Database:
+def bigquery_database_schema(bigquery_connector) -> DatabaseSchema:
     return bigquery_connector.get_database_schema()
+
+
+@pytest.fixture
+def duckdb_search_space(duckdb_connector) -> SearchSpace:
+    return duckdb_connector.add_to_search_space(SearchSpace())
+
+
+@pytest.fixture
+def bigquery_search_space(bigquery_connector) -> SearchSpace:
+    return bigquery_connector.add_to_search_space(SearchSpace())
 
 @pytest.fixture
 def semantic_linker(model_name) -> SemanticLinker:
@@ -172,27 +185,33 @@ def pruner(model_name) -> Pruner:
     return Pruner(model_name=model_name)
 
 @pytest.fixture
-def pruned_duckdb_database(
+def pruned_duckdb_search_space(
     pruner,
-    natural_language_query,
-    duckdb_database,
+    question,
+    duckdb_search_space,
     aggregate_logical_plan,
-) -> Database:
+) -> SearchSpace:
     return pruner.dual_pathway_pruning(
-        natural_language_query=natural_language_query,
-        database=duckdb_database,
+        question=question,
+        search_space=duckdb_search_space,
         logical_plan=aggregate_logical_plan,
     )
+
+
+@pytest.fixture
+def pruned_duckdb_database_schema(pruned_duckdb_search_space) -> DatabaseSchema:
+    assert pruned_duckdb_search_space.database_schema is not None
+    return pruned_duckdb_search_space.database_schema
 
 @pytest.fixture
 def semantic_linking_result(
     semantic_linker,
-    natural_language_query,
-    pruned_duckdb_database,
+    question,
+    pruned_duckdb_search_space,
     logical_plan,
 ) -> SemanticLinkingResult:
     return semantic_linker.link(
-        natural_language_query=natural_language_query,
-        database=pruned_duckdb_database,
+        question=question,
+        search_space=pruned_duckdb_search_space,
         logical_plan=logical_plan,
     )

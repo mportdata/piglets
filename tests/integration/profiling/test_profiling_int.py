@@ -2,35 +2,37 @@ import pytest
 import re
 
 from piglets import (
-    Database,
+    DatabaseSchema,
     DatabaseProfileResult,
     Profiler,
     ProfilingQueries,
     ProfilingQuery,
     QueryResult,
     QueryResults,
-    Table,
+    SearchSpace,
+    TableSchema,
     TableProfileResult,
 )
 
 @pytest.fixture
-def profiler(model_name, pruned_duckdb_database) -> Profiler:
-    return Profiler(model_name=model_name, database=pruned_duckdb_database)
+def profiler(model_name, pruned_duckdb_search_space) -> Profiler:
+    return Profiler(model_name=model_name, search_space=pruned_duckdb_search_space)
 
 @pytest.fixture
-def table(pruned_duckdb_database) -> Table:
-    return pruned_duckdb_database.tables[0]
+def table(pruned_duckdb_search_space) -> TableSchema:
+    assert pruned_duckdb_search_space.database_schema is not None
+    return pruned_duckdb_search_space.database_schema.table_schemas[0]
 
 def test_generate_table_profiler_queries(
     profiler,
-    natural_language_query,
+    question,
     table,
     semantic_linking_result,
 ):
 
     profiling_queries = profiler._generate_table_profiler_queries(
-        natural_language_query=natural_language_query,
-        table=table,
+        question=question,
+        table_schema=table,
         semantic_linking_result=semantic_linking_result
     )
 
@@ -52,7 +54,7 @@ def test_generate_table_profiler_queries(
 
 def test_executetable_profiling_queries(
     profiler,
-    natural_language_query,
+    question,
     table,
     semantic_linking_result,
     duckdb_connector,
@@ -84,8 +86,8 @@ def test_executetable_profiling_queries(
     query_results: QueryResults = profiler._execute_table_profiling_queries(
         database_connector=duckdb_connector,
         profiling_queries=profiling_queries,
-        natural_language_query=natural_language_query,
-        table=table,
+        question=question,
+        table_schema=table,
     )
 
     assert isinstance(query_results, QueryResults)
@@ -130,20 +132,20 @@ def test_executetable_profiling_queries(
 
 def test_profile_table(
         profiler,
-        natural_language_query,
+        question,
         table,
         duckdb_connector,
         semantic_linking_result
 ):
     table_profile_result: TableProfileResult = profiler.profile_table(
-        natural_language_query=natural_language_query,
-        table=table,
+        question=question,
+        table_schema=table,
         database_connector=duckdb_connector,
         semantic_linking_result=semantic_linking_result
     )
 
     print(f"Relevant: {table_profile_result.relevant}")
-    print(f"Table summary: {table_profile_result.table_summary}")
+    print(f"TableSchema summary: {table_profile_result.table_summary}")
     print("Relevant columns:")
     for column_result in table_profile_result.relevant_columns:
         print(f"- {column_result.column_name}: {column_result.relevance_reason}")
@@ -153,7 +155,7 @@ def test_profile_table(
     assert table_profile_result.table_summary.strip()
     assert isinstance(table_profile_result.relevant_columns, list)
 
-    table_column_names = {column.name for column in table.columns}
+    table_column_names = {column.name for column in table.column_schemas}
     seen_column_names = set()
     for column_result in table_profile_result.relevant_columns:
         assert column_result.column_name.strip()
@@ -169,22 +171,23 @@ def test_profile_table(
 
 def test_profile_database(
     profiler,
-    natural_language_query,
-    pruned_duckdb_database,
+    question,
+    pruned_duckdb_search_space,
     table,
     duckdb_connector,
     semantic_linking_result,
 ):
-    single_table_database = Database(
-        name=pruned_duckdb_database.name,
-        database_type=pruned_duckdb_database.database_type,
-        tables=[table],
+    assert pruned_duckdb_search_space.database_schema is not None
+    single_table_database = DatabaseSchema(
+        name=pruned_duckdb_search_space.database_schema.name,
+        database_type=pruned_duckdb_search_space.database_schema.database_type,
+        table_schemas=[table],
     )
 
     database_profile_result: DatabaseProfileResult = profiler.profile_database(
-        database=single_table_database,
+        search_space=SearchSpace(database_schema=single_table_database),
         database_connector=duckdb_connector,
-        natural_language_query=natural_language_query,
+        question=question,
         semantic_linking_result=semantic_linking_result,
     )
 
@@ -202,9 +205,9 @@ def test_profile_database(
     assert isinstance(database_profile_result, DatabaseProfileResult)
     assert database_profile_result.database_name == single_table_database.name
     assert database_profile_result.database_type == single_table_database.database_type
-    assert len(database_profile_result.table_profile_results) == len(single_table_database.tables)
+    assert len(database_profile_result.table_profile_results) == len(single_table_database.table_schemas)
 
-    table_column_names = {column.name for column in table.columns}
+    table_column_names = {column.name for column in table.column_schemas}
     for table_profile_result in database_profile_result.table_profile_results:
         assert isinstance(table_profile_result, TableProfileResult)
         assert isinstance(table_profile_result.relevant, bool)

@@ -5,19 +5,23 @@ import pytest
 from piglets import (
     DatabaseProfileResult,
     Profiler,
+    SearchSpace,
     Synthesizer,
 )
 
 
 @pytest.fixture
-def profiler(model_name, pruned_duckdb_database) -> Profiler:
-    return Profiler(model_name=model_name, database=pruned_duckdb_database)
+def profiler(model_name, pruned_duckdb_database_schema) -> Profiler:
+    return Profiler(
+        model_name=model_name,
+        search_space=SearchSpace(database_schema=pruned_duckdb_database_schema),
+    )
 
 
 @pytest.fixture
-def synthesizer(model_name, pruned_duckdb_database, duckdb_connector) -> Synthesizer:
+def synthesizer(model_name, pruned_duckdb_database_schema, duckdb_connector) -> Synthesizer:
     return Synthesizer(
-        database=pruned_duckdb_database,
+        search_space=SearchSpace(database_schema=pruned_duckdb_database_schema),
         database_connector=duckdb_connector,
         model_name=model_name,
         model_provider=None,
@@ -27,27 +31,27 @@ def synthesizer(model_name, pruned_duckdb_database, duckdb_connector) -> Synthes
 @pytest.fixture
 def database_profile_result(
     profiler,
-    natural_language_query,
-    pruned_duckdb_database,
+    question,
+    pruned_duckdb_database_schema,
     duckdb_connector,
     semantic_linking_result,
 ) -> DatabaseProfileResult:
     return profiler.profile_database(
-        database=pruned_duckdb_database,
+        search_space=SearchSpace(database_schema=pruned_duckdb_database_schema),
         database_connector=duckdb_connector,
-        natural_language_query=natural_language_query,
+        question=question,
         semantic_linking_result=semantic_linking_result,
     )
 
 
 def test_synthesize_observations(
     synthesizer,
-    natural_language_query,
+    question,
     semantic_linking_result,
     database_profile_result,
 ):
     synthesis_run = synthesizer.synthesize_observations(
-        natural_language_question=natural_language_query,
+        question=question,
         semantic_linking_result=semantic_linking_result,
         database_profile_result=database_profile_result,
     )

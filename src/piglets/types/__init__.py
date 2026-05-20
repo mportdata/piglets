@@ -4,13 +4,17 @@ from .plans import (
     LogicalPlans as LogicalPlans,
     LogicalSteps as LogicalSteps,
 )
+from .artifacts import (
+    Question as Question,
+    SearchSpace as SearchSpace,
+)
 from .linking import (
     SemanticLinkingResult as SemanticLinkingResult,
 )
 from .database import (
-    Column as Column,
-    Database as Database,
-    Table as Table,
+    ColumnSchema as ColumnSchema,
+    DatabaseSchema as DatabaseSchema,
+    TableSchema as TableSchema,
 )
 from .pruning import (
     DeletionColumns as DeletionColumns,
@@ -47,11 +51,13 @@ __all__ = [
     "LogicalPlan",
     "LogicalPlans",
     "LogicalSteps",
+    "Question",
+    "SearchSpace",
     "SemanticLinkingResult",
     # database types
-    "Column",
-    "Database",
-    "Table",
+    "ColumnSchema",
+    "DatabaseSchema",
+    "TableSchema",
     # pruning types
     "DeletionColumns",
     "DeletionSet",

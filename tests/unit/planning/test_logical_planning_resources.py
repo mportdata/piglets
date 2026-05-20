@@ -2,30 +2,45 @@ from pathlib import Path
 
 import pytest
 
-from piglets import AggregatePlan, LogicalPlan, LogicalPlanner, LogicalPlans
-from piglets.planning.logical_planning import logical_planner
+from piglets import AggregatePlan, LogicalPlan, LogicalPlanner, LogicalPlans, Question
+from piglets.capabilities.hypothesis_generation import (
+    LogicalPlanner as CapabilityLogicalPlanner,
+)
+from piglets.capabilities.hypothesis_generation.techniques.logical_planning import (
+    logical_planner as capability_logical_planner,
+)
+from piglets.planning import LogicalPlanner as PlanningLogicalPlanner
+from piglets.planning.logical_planning import (
+    LogicalPlanner as LogicalPlanningLogicalPlanner,
+)
 from piglets.types import plans
 
 
 def test_logical_planner_prompt_is_available():
-    prompt_path = Path(logical_planner.__file__).with_suffix(".md")
+    prompt_path = Path(capability_logical_planner.__file__).with_suffix(".md")
 
     assert prompt_path.is_file()
 
 
-def test_plan_requires_at_least_one_sample():
-    planner = LogicalPlanner.__new__(LogicalPlanner)
+def test_logical_planner_compatibility_imports_resolve_to_same_class():
+    assert LogicalPlanner is CapabilityLogicalPlanner
+    assert LogicalPlanner is PlanningLogicalPlanner
+    assert LogicalPlanner is LogicalPlanningLogicalPlanner
 
+
+def test_plan_requires_at_least_one_sample():
     with pytest.raises(ValueError, match="num_samples must be at least 1"):
-        planner.plan("count chickens", num_samples=0)
+        LogicalPlanner(model_name="fake-model", num_samples=0)
 
 
 def test_plan_wraps_structured_logical_steps(fake_logical_plan_llm):
     planner = LogicalPlanner.__new__(LogicalPlanner)
     planner.system_instruction = "Plan logically."
+    planner.num_samples = 1
     planner.llm = fake_logical_plan_llm
 
-    logical_plan = planner.plan("count piglets")
+    question = Question(natural_language_question="count piglets")
+    logical_plan = planner.plan(question)
 
     assert isinstance(logical_plan, LogicalPlan)
     assert logical_plan.natural_language_query == "count piglets"
@@ -42,10 +57,12 @@ def test_plan_aggregates_multiple_samples(monkeypatch, fake_logical_plan_llm):
     planner = LogicalPlanner.__new__(LogicalPlanner)
     planner.model_name = "fake-model"
     planner.model_provider = None
+    planner.num_samples = 3
     planner.system_instruction = "Plan logically."
     planner.llm = fake_logical_plan_llm
 
-    logical_plan = planner.plan("count piglets", num_samples=3)
+    question = Question(natural_language_question="count piglets")
+    logical_plan = planner.plan(question)
 
     assert isinstance(logical_plan, AggregatePlan)
     assert logical_plan.natural_language_query == "count piglets"

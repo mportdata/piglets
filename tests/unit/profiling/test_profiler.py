@@ -7,17 +7,23 @@ import pytest
 from piglets.policies import SemanticRules
 from piglets.profiling.profiler import Profiler
 from piglets.types import (
-    Column,
-    Database,
+    ColumnSchema,
+    DatabaseSchema,
     ProfilingQueries,
     ProfilingQuery,
+    Question,
     QueryResult,
     QueryResults,
+    SearchSpace,
     SemanticLinkingResult,
-    Table,
+    TableSchema,
     TableProfileColumnResult,
     TableProfileResult,
 )
+
+
+def _question() -> Question:
+    return Question(natural_language_question="Which orders are cancelled?")
 
 
 class FakeProfilingLLM:
@@ -99,65 +105,72 @@ class FakeParallelConnector:
 
 
 class FakeParallelProfiler(Profiler):
-    def __init__(self, database):
-        super().__init__(model_name="test-model", database=database)
+    def __init__(self, database_schema):
+        super().__init__(
+            model_name="test-model",
+            search_space=SearchSpace(database_schema=database_schema),
+        )
         self.barrier = threading.Barrier(2)
 
     def profile_table(
         self,
-        natural_language_query,
-        table,
+        question,
+        table_schema,
         database_connector,
         semantic_linking_result=None,
     ):
         self.barrier.wait(timeout=1)
-        if table.name == "orders":
+        if table_schema.name == "orders":
             time.sleep(0.05)
 
         return TableProfileResult(
-            table_name=table.name,
+            table_name=table_schema.name,
             relevant=True,
             relevant_columns=[
                 TableProfileColumnResult(
-                    column_name=table.columns[0].name,
-                    relevance_reason=f"{table.name} is relevant.",
-                    observations=f"{table.name} was profiled.",
+                    column_name=table_schema.column_schemas[0].name,
+                    relevance_reason=f"{table_schema.name} is relevant.",
+                    observations=f"{table_schema.name} was profiled.",
                 )
             ],
-            table_summary=f"{table.name} summary.",
+            table_summary=f"{table_schema.name} summary.",
         )
 
 
-def _table() -> Table:
-    return Table(
+def _table() -> TableSchema:
+    return TableSchema(
         name="orders",
-        columns=[
-            Column(name="order_id", data_type="INTEGER"),
-            Column(name="status", data_type="VARCHAR"),
-            Column(name="created_at", data_type="TIMESTAMP"),
+        column_schemas=[
+            ColumnSchema(name="order_id", data_type="INTEGER"),
+            ColumnSchema(name="status", data_type="VARCHAR"),
+            ColumnSchema(name="created_at", data_type="TIMESTAMP"),
         ],
     )
 
 
-def _database(table: Table | None = None) -> Database:
-    return Database(
+def _database(table: TableSchema | None = None) -> DatabaseSchema:
+    return DatabaseSchema(
         name="example",
         database_type="DuckDB",
-        tables=[table or _table()],
+        table_schemas=[table or _table()],
     )
 
 
-def _two_table_database() -> Database:
-    return Database(
+def _search_space(table: TableSchema | None = None) -> SearchSpace:
+    return SearchSpace(database_schema=_database(table))
+
+
+def _two_table_database() -> DatabaseSchema:
+    return DatabaseSchema(
         name="example",
         database_type="DuckDB",
-        tables=[
+        table_schemas=[
             _table(),
-            Table(
+            TableSchema(
                 name="customers",
-                columns=[
-                    Column(name="customer_id", data_type="INTEGER"),
-                    Column(name="name", data_type="VARCHAR"),
+                column_schemas=[
+                    ColumnSchema(name="customer_id", data_type="INTEGER"),
+                    ColumnSchema(name="name", data_type="VARCHAR"),
                 ],
             ),
         ],
@@ -189,12 +202,12 @@ def test_generate_table_profiler_queries_uses_structured_output_and_returns_prof
 
     profiler = Profiler(
         model_name="test-model",
-        database=_database(),
+        search_space=_search_space(),
         model_provider="test-provider",
     )
     profiling_queries = profiler._generate_table_profiler_queries(
-        natural_language_query="Which orders are cancelled?",
-        table=_table(),
+        question=_question(),
+        table_schema=_table(),
         semantic_linking_result=_semantic_linking_result(),
     )
 
@@ -216,12 +229,12 @@ def test_generate_table_profiler_queries_prompt_uses_critical_rules_and_single_t
 
     profiler = Profiler(
         model_name="test-model",
-        database=_database(),
+        search_space=_search_space(),
         rules=SemanticRules(),
     )
     profiler._generate_table_profiler_queries(
-        natural_language_query="Which orders are cancelled?",
-        table=_table(),
+        question=_question(),
+        table_schema=_table(),
         semantic_linking_result=_semantic_linking_result(),
     )
 
@@ -248,16 +261,16 @@ def test_generate_table_profiler_queries_prompt_uses_case_insensitive_table_func
         lambda model, model_provider=None: fake_llm,
     )
 
-    table = Table(
+    table = TableSchema(
         name="Orders",
-        columns=[
-            Column(name="status", data_type="VARCHAR"),
+        column_schemas=[
+            ColumnSchema(name="status", data_type="VARCHAR"),
         ],
     )
-    profiler = Profiler(model_name="test-model", database=_database(table))
+    profiler = Profiler(model_name="test-model", search_space=_search_space(table))
     profiler._generate_table_profiler_queries(
-        natural_language_query="Which orders are cancelled?",
-        table=table,
+        question=_question(),
+        table_schema=table,
         semantic_linking_result=_semantic_linking_result(table_name="orders"),
     )
 
@@ -272,10 +285,10 @@ def test_generate_table_profiler_queries_uses_unknown_role_without_semantic_link
         lambda model, model_provider=None: fake_llm,
     )
 
-    profiler = Profiler(model_name="test-model", database=_database())
+    profiler = Profiler(model_name="test-model", search_space=_search_space())
     profiling_queries = profiler._generate_table_profiler_queries(
-        natural_language_query="Which orders are cancelled?",
-        table=_table(),
+        question=_question(),
+        table_schema=_table(),
     )
 
     prompt = fake_llm.prompts[0]
@@ -293,10 +306,10 @@ def test_profile_table_can_be_called_without_semantic_linking(monkeypatch):
         lambda model, model_provider=None: fake_llm,
     )
 
-    profiler = Profiler(model_name="test-model", database=_database())
+    profiler = Profiler(model_name="test-model", search_space=_search_space())
     profiling_queries = profiler._generate_table_profiler_queries(
-        natural_language_query="Which orders are cancelled?",
-        table=_table(),
+        question=_question(),
+        table_schema=_table(),
     )
 
     assert isinstance(profiling_queries, ProfilingQueries)
@@ -311,7 +324,7 @@ def test_profile_table_from_query_results_uses_structured_output_and_evidence(mo
         lambda model, model_provider=None: fake_llm,
     )
 
-    profiler = Profiler(model_name="test-model", database=_database())
+    profiler = Profiler(model_name="test-model", search_space=_search_space())
     query_results = QueryResults(
         query_results=[
             QueryResult(
@@ -324,9 +337,9 @@ def test_profile_table_from_query_results_uses_structured_output_and_evidence(mo
     )
 
     table_profile_result = profiler._profile_table_from_query_results(
-        natural_language_query="Which orders are cancelled?",
+        question=_question(),
         query_results=query_results,
-        table=_table(),
+        table_schema=_table(),
     )
 
     prompt = fake_llm.prompts[0]
@@ -344,7 +357,7 @@ def test_profile_table_from_query_results_uses_structured_output_and_evidence(mo
 
 def test_execute_table_profiling_queries_runs_queries_in_parallel_and_preserves_order(caplog):
     caplog.set_level(logging.DEBUG, logger="piglets.profiling.profiler")
-    profiler = Profiler(model_name="test-model", database=_database())
+    profiler = Profiler(model_name="test-model", search_space=_search_space())
     profiling_queries = ProfilingQueries(
         query=[
             ProfilingQuery(motivation="First query.", query="SELECT 1"),
@@ -355,8 +368,8 @@ def test_execute_table_profiling_queries_runs_queries_in_parallel_and_preserves_
     query_results = profiler._execute_table_profiling_queries(
         database_connector=FakeParallelConnector(),
         profiling_queries=profiling_queries,
-        natural_language_query="Which orders are cancelled?",
-        table=_table(),
+        question=_question(),
+        table_schema=_table(),
     )
 
     assert isinstance(query_results, QueryResults)
@@ -380,7 +393,7 @@ def test_execute_table_profiling_queries_repairs_failed_query_and_preserves_orde
         "piglets.profiling.profiler.init_chat_model",
         lambda model, model_provider=None: fake_llm,
     )
-    profiler = Profiler(model_name="test-model", database=_database())
+    profiler = Profiler(model_name="test-model", search_space=_search_space())
     connector = FakeRepairConnector(
         failures_by_query={
             "SELECT broken": [ValueError("Binder Error: invalid column")],
@@ -397,8 +410,8 @@ def test_execute_table_profiling_queries_repairs_failed_query_and_preserves_orde
     query_results = profiler._execute_table_profiling_queries(
         database_connector=connector,
         profiling_queries=profiling_queries,
-        natural_language_query="Which orders are cancelled?",
-        table=_table(),
+        question=_question(),
+        table_schema=_table(),
     )
 
     assert [result.query for result in query_results.query_results] == [
@@ -421,7 +434,7 @@ def test_repair_profiling_query_prompt_contains_failed_query_context(monkeypatch
         "piglets.profiling.profiler.init_chat_model",
         lambda model, model_provider=None: fake_llm,
     )
-    profiler = Profiler(model_name="test-model", database=_database())
+    profiler = Profiler(model_name="test-model", search_space=_search_space())
     connector = FakeRepairConnector(
         failures_by_query={
             "SELECT broken": [ValueError("Binder Error: invalid column")],
@@ -438,8 +451,8 @@ def test_repair_profiling_query_prompt_contains_failed_query_context(monkeypatch
                 )
             ]
         ),
-        natural_language_query="Which orders are cancelled?",
-        table=_table(),
+        question=_question(),
+        table_schema=_table(),
     )
 
     prompt = fake_llm.prompts[0]
@@ -464,7 +477,7 @@ def test_execute_table_profiling_queries_raises_after_repair_attempts_exhausted(
     )
     profiler = Profiler(
         model_name="test-model",
-        database=_database(),
+        search_space=_search_space(),
         max_query_repair_attempts=1,
     )
     connector = FakeRepairConnector(
@@ -487,8 +500,8 @@ def test_execute_table_profiling_queries_raises_after_repair_attempts_exhausted(
                     )
                 ]
             ),
-            natural_language_query="Which orders are cancelled?",
-            table=_table(),
+            question=_question(),
+            table_schema=_table(),
         )
 
     assert connector.queries == [
@@ -510,7 +523,7 @@ def test_execute_table_profiling_queries_does_not_repair_when_disabled(monkeypat
     )
     profiler = Profiler(
         model_name="test-model",
-        database=_database(),
+        search_space=_search_space(),
         max_query_repair_attempts=0,
     )
     connector = FakeRepairConnector(
@@ -530,8 +543,8 @@ def test_execute_table_profiling_queries_does_not_repair_when_disabled(monkeypat
                     )
                 ]
             ),
-            natural_language_query="Which orders are cancelled?",
-            table=_table(),
+            question=_question(),
+            table_schema=_table(),
         )
 
     assert init_calls == []
@@ -543,9 +556,9 @@ def test_profile_database_profiles_tables_in_parallel_and_preserves_order(caplog
     profiler = FakeParallelProfiler(database)
 
     database_profile_result = profiler.profile_database(
-        database=database,
+        search_space=SearchSpace(database_schema=database),
         database_connector=object(),
-        natural_language_query="Which orders are cancelled?",
+        question=_question(),
     )
 
     assert database_profile_result.database_type == "DuckDB"

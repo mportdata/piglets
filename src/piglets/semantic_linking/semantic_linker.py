@@ -1,7 +1,19 @@
 from langchain.chat_models import init_chat_model
 
 from piglets.policies import SemanticRules
-from piglets.types import AggregatePlan, Database, LogicalPlan, SemanticLinkingResult
+from piglets.types import (
+    AggregatePlan,
+    LogicalPlan,
+    Question,
+    SearchSpace,
+    SemanticLinkingResult,
+)
+
+
+def _database_schema_from_search_space(search_space: SearchSpace):
+    if search_space.database_schema is None:
+        raise ValueError("search_space must contain a database_schema")
+    return search_space.database_schema
 
 class SemanticLinker:
     def __init__(
@@ -16,10 +28,12 @@ class SemanticLinker:
     
     def link(
         self,
-        natural_language_query: str,
-        database: Database,
+        question: Question,
+        search_space: SearchSpace,
         logical_plan: LogicalPlan | AggregatePlan = None,
     ) -> SemanticLinkingResult:
+        natural_language_question = question.natural_language_question
+        database_schema = _database_schema_from_search_space(search_space)
     
         llm = init_chat_model(model=self.model_name, model_provider=self.model_provider)
         llm = llm.with_structured_output(
@@ -36,11 +50,11 @@ class SemanticLinker:
             database structure and how it grounds the user’s intent.
             {critical_rules}
             *** USER QUESTION ***
-            {natural_language_query}
+            {natural_language_question}
             *** Logical Plan ***
             {logical_plan}
             *** DATABASE SCHEMA ***
-            {database.export_as_string()}
+            {database_schema.export_as_string()}
             *** YOUR TASKS ***
             1. **Database Structure Overview**: Describe the database
             structure in detail (e.g., ’A banking system with customers

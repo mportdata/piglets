@@ -1,13 +1,13 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
-from .database import Database, Table
+from .database import DatabaseSchema, TableSchema
 
 
 class PruningColumns(BaseModel):
     """A list of columns for a given table in a pruning operation."""
 
     table: str = ""
-    columns: list[str] = []
+    columns: list[str] = Field(default_factory=list)
 
 
 class PreservationColumns(PruningColumns):
@@ -17,32 +17,38 @@ class PreservationColumns(PruningColumns):
 class PreservationSet(BaseModel):
     """The set of tables and fields to preserve during pruning, based on the logical plan and natural language question."""
 
-    relevant_tables: list[str] = []
-    relevant_columns: list[PreservationColumns] = []
+    relevant_tables: list[str] = Field(default_factory=list)
+    relevant_columns: list[PreservationColumns] = Field(default_factory=list)
 
-    def to_database_type(self, target_database: Database) -> Database:
-        """Convert the PreservationSet to a Database type, which can be used for pruning."""
-        preserved_tables = []
-        for table in target_database.tables:
-            if table.name in self.relevant_tables:
-                preserved_tables.append(table)
+    def to_database_schema(self, target_database_schema: DatabaseSchema) -> DatabaseSchema:
+        """Convert the PreservationSet to a DatabaseSchema type, which can be used for pruning."""
+        preserved_table_schemas = []
+        for table_schema in target_database_schema.table_schemas:
+            if table_schema.name in self.relevant_tables:
+                preserved_table_schemas.append(table_schema)
             else:
-                relevant_columns_for_table = next(
-                    (col.columns for col in self.relevant_columns if col.table == table.name),
+                relevant_columns_for_table_schema = next(
+                    (
+                        col.columns for col in self.relevant_columns
+                        if col.table == table_schema.name
+                    ),
                     []
                 )
-                if relevant_columns_for_table:
-                    preserved_columns = [
-                        column for column in table.columns
-                        if column.name in relevant_columns_for_table
+                if relevant_columns_for_table_schema:
+                    preserved_column_schemas = [
+                        column_schema for column_schema in table_schema.column_schemas
+                        if column_schema.name in relevant_columns_for_table_schema
                     ]
-                    preserved_tables.append(
-                        Table(name=table.name, columns=preserved_columns)
+                    preserved_table_schemas.append(
+                        TableSchema(
+                            name=table_schema.name,
+                            column_schemas=preserved_column_schemas,
+                        )
                     )
-        return Database(
-            name=target_database.name,
-            database_type=target_database.database_type,
-            tables=preserved_tables,
+        return DatabaseSchema(
+            name=target_database_schema.name,
+            database_type=target_database_schema.database_type,
+            table_schemas=preserved_table_schemas,
         )
 
 
@@ -53,30 +59,36 @@ class DeletionColumns(PruningColumns):
 class DeletionSet(BaseModel):
     """The set of tables and fields to delete during pruning, based on the logical plan and natural language question."""
 
-    obviously_irrelevant_tables: list[str] = []
-    obviously_irrelevant_columns: list[DeletionColumns] = []
+    obviously_irrelevant_tables: list[str] = Field(default_factory=list)
+    obviously_irrelevant_columns: list[DeletionColumns] = Field(default_factory=list)
 
-    def to_database_type(self, target_database: Database) -> Database:
-        """Convert the DeletionSet to a Database type, which can be used for pruning."""
-        deleted_tables = []
-        for table in target_database.tables:
-            if table.name in self.obviously_irrelevant_tables:
-                deleted_tables.append(table)
+    def to_database_schema(self, target_database_schema: DatabaseSchema) -> DatabaseSchema:
+        """Convert the DeletionSet to a DatabaseSchema type, which can be used for pruning."""
+        deleted_table_schemas = []
+        for table_schema in target_database_schema.table_schemas:
+            if table_schema.name in self.obviously_irrelevant_tables:
+                deleted_table_schemas.append(table_schema)
             else:
-                irrelevant_columns_for_table = next(
-                    (col.columns for col in self.obviously_irrelevant_columns if col.table == table.name),
+                irrelevant_columns_for_table_schema = next(
+                    (
+                        col.columns for col in self.obviously_irrelevant_columns
+                        if col.table == table_schema.name
+                    ),
                     []
                 )
-                if irrelevant_columns_for_table:
-                    deleted_columns = [
-                        column for column in table.columns
-                        if column.name in irrelevant_columns_for_table
+                if irrelevant_columns_for_table_schema:
+                    deleted_column_schemas = [
+                        column_schema for column_schema in table_schema.column_schemas
+                        if column_schema.name in irrelevant_columns_for_table_schema
                     ]
-                    deleted_tables.append(
-                        Table(name=table.name, columns=deleted_columns)
+                    deleted_table_schemas.append(
+                        TableSchema(
+                            name=table_schema.name,
+                            column_schemas=deleted_column_schemas,
+                        )
                     )
-        return Database(
-            name=target_database.name,
-            database_type=target_database.database_type,
-            tables=deleted_tables,
+        return DatabaseSchema(
+            name=target_database_schema.name,
+            database_type=target_database_schema.database_type,
+            table_schemas=deleted_table_schemas,
         )

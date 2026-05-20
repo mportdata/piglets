@@ -2,35 +2,35 @@ import pytest
 from pydantic import ValidationError
 
 from piglets.types import (
-    Column,
-    Database,
+    ColumnSchema,
+    DatabaseSchema,
     RefinedSchemaColumn,
     RefinedSchemaTable,
     RejectedCandidate,
     SynthesisRound,
     SynthesisResult,
     SynthesisRunResult,
-    Table,
+    TableSchema,
 )
 
 
-def _database() -> Database:
-    return Database(
+def _database() -> DatabaseSchema:
+    return DatabaseSchema(
         name="example",
         database_type="DuckDB",
-        tables=[
-            Table(
+        table_schemas=[
+            TableSchema(
                 name="orders",
-                columns=[
-                    Column(name="order_id", data_type="INTEGER"),
-                    Column(name="status", data_type="VARCHAR"),
+                column_schemas=[
+                    ColumnSchema(name="order_id", data_type="INTEGER"),
+                    ColumnSchema(name="status", data_type="VARCHAR"),
                 ],
             ),
-            Table(
+            TableSchema(
                 name="customers",
-                columns=[
-                    Column(name="customer_id", data_type="INTEGER"),
-                    Column(name="name", data_type="VARCHAR"),
+                column_schemas=[
+                    ColumnSchema(name="customer_id", data_type="INTEGER"),
+                    ColumnSchema(name="name", data_type="VARCHAR"),
                 ],
             ),
         ],
@@ -85,7 +85,7 @@ def test_synthesis_result_rejects_invalid_status():
         SynthesisResult(status="DONE")
 
 
-def test_synthesis_result_to_database_type_uses_known_schema_only():
+def test_synthesis_result_to_database_schema_uses_known_schema_only():
     result = SynthesisResult(
         refined_schema={
             "orders": RefinedSchemaTable(
@@ -114,13 +114,13 @@ def test_synthesis_result_to_database_type_uses_known_schema_only():
         status="[CONFIRM]",
     )
 
-    synthesized_database = result.to_database_type(_database())
+    synthesized_database = result.to_database_schema(_database())
 
     assert synthesized_database.name == "example"
     assert synthesized_database.database_type == "DuckDB"
-    assert len(synthesized_database.tables) == 1
-    assert synthesized_database.tables[0].name == "orders"
-    assert [column.name for column in synthesized_database.tables[0].columns] == [
+    assert len(synthesized_database.table_schemas) == 1
+    assert synthesized_database.table_schemas[0].name == "orders"
+    assert [column.name for column in synthesized_database.table_schemas[0].column_schemas] == [
         "status",
     ]
 

@@ -130,7 +130,7 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [tool.setuptools.package-data]
-"piglets.planning.logical_planning" = ["*.md"]
+"piglets.capabilities.hypothesis_generation.techniques.logical_planning" = ["*.md"]
 "piglets.policies" = ["prompts/*.md"]
 
 [tool.pytest.ini_options]

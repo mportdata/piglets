@@ -1,84 +1,111 @@
 from pydantic import BaseModel, Field
 
 
-class Column(BaseModel):
+class ColumnSchema(BaseModel):
     """The schema of a database column, including its name and data type."""
 
     name: str = Field(description="The name of the column.")
     data_type: str = Field(description="The data type of the column (e.g., INTEGER, VARCHAR).")
 
-class Table(BaseModel):
+class TableSchema(BaseModel):
     """The schema of a database table, including its name and columns."""
 
     name: str = Field(description="The name of the table.")
-    columns: list[Column] = Field(description="The list of columns in the table.")
+    column_schemas: list[ColumnSchema] = Field(
+        description="The list of column schemas in the table."
+    )
 
     def columns_to_string(self) -> str:
         """Export the table columns as one prompt-readable line per column."""
         return "\n".join(
-            f"{column.name} ({column.data_type}):"
-            for column in self.columns
+            f"{column_schema.name} ({column_schema.data_type}):"
+            for column_schema in self.column_schemas
         )
 
-class Database(BaseModel):
+class DatabaseSchema(BaseModel):
     """The schema of a database, including its name and tables."""
 
     name: str = Field(description="The name of the database.")
     database_type: str = Field(description="The SQL database type or dialect.")
-    tables: list[Table] = Field(description="The list of tables in the database.")
+    table_schemas: list[TableSchema] = Field(
+        description="The list of table schemas in the database."
+    )
 
-    def subtract(self, database_to_subtract):
-        """Subtract another database schema from this one, returning a new Database with only the tables and columns that are not in the other database."""
-        remaining_tables = []
-        for table in self.tables:
-            if table.name not in [t.name for t in database_to_subtract.tables]:
-                remaining_tables.append(table)
+    def subtract(self, database_schema_to_subtract: "DatabaseSchema") -> "DatabaseSchema":
+        """Subtract another database schema from this one, returning a new DatabaseSchema with only the tables and columns that are not in the other database."""
+        remaining_table_schemas = []
+        for table_schema in self.table_schemas:
+            if table_schema.name not in [
+                t.name for t in database_schema_to_subtract.table_schemas
+            ]:
+                remaining_table_schemas.append(table_schema)
             else:
-                other_table = next(t for t in database_to_subtract.tables if t.name == table.name)
-                remaining_columns = [
-                    column for column in table.columns
-                    if column.name not in [c.name for c in other_table.columns]
+                other_table_schema = next(
+                    t
+                    for t in database_schema_to_subtract.table_schemas
+                    if t.name == table_schema.name
+                )
+                remaining_column_schemas = [
+                    column_schema for column_schema in table_schema.column_schemas
+                    if column_schema.name not in [
+                        c.name for c in other_table_schema.column_schemas
+                    ]
                 ]
-                if remaining_columns:
-                    remaining_tables.append(Table(name=table.name, columns=remaining_columns))
-        return Database(
+                if remaining_column_schemas:
+                    remaining_table_schemas.append(
+                        TableSchema(
+                            name=table_schema.name,
+                            column_schemas=remaining_column_schemas,
+                        )
+                    )
+        return DatabaseSchema(
             name=self.name,
             database_type=self.database_type,
-            tables=remaining_tables,
+            table_schemas=remaining_table_schemas,
         )
 
-    def union(self, other_database):
-        """Return a new Database containing all tables and columns from both databases without duplicates."""
-        union_tables = []
-        for table in self.tables:
-            other_table = next(
-                (t for t in other_database.tables if t.name == table.name),
+    def union(self, other_database_schema: "DatabaseSchema") -> "DatabaseSchema":
+        """Return a new DatabaseSchema containing all tables and columns from both databases without duplicates."""
+        union_table_schemas = []
+        for table_schema in self.table_schemas:
+            other_table_schema = next(
+                (
+                    t for t in other_database_schema.table_schemas
+                    if t.name == table_schema.name
+                ),
                 None,
             )
-            if other_table is None:
-                union_tables.append(table)
+            if other_table_schema is None:
+                union_table_schemas.append(table_schema)
                 continue
 
-            column_names = {column.name for column in table.columns}
-            union_columns = [
-                *table.columns,
+            column_schema_names = {
+                column_schema.name for column_schema in table_schema.column_schemas
+            }
+            union_column_schemas = [
+                *table_schema.column_schemas,
                 *[
-                    column for column in other_table.columns
-                    if column.name not in column_names
+                    column_schema for column_schema in other_table_schema.column_schemas
+                    if column_schema.name not in column_schema_names
                 ],
             ]
-            union_tables.append(Table(name=table.name, columns=union_columns))
+            union_table_schemas.append(
+                TableSchema(
+                    name=table_schema.name,
+                    column_schemas=union_column_schemas,
+                )
+            )
 
-        table_names = {table.name for table in self.tables}
-        union_tables.extend(
-            table for table in other_database.tables
-            if table.name not in table_names
+        table_schema_names = {table_schema.name for table_schema in self.table_schemas}
+        union_table_schemas.extend(
+            table_schema for table_schema in other_database_schema.table_schemas
+            if table_schema.name not in table_schema_names
         )
 
-        return Database(
+        return DatabaseSchema(
             name=self.name,
             database_type=self.database_type,
-            tables=union_tables,
+            table_schemas=union_table_schemas,
         )
 
     def export_as_string(self) -> str:
@@ -88,10 +115,10 @@ class Database(BaseModel):
             f"Database Type: {self.database_type}",
         ]
 
-        for table in self.tables:
+        for table_schema in self.table_schemas:
             columns = ", ".join(
-                f"{column.name}: {column.data_type}"
-                for column in table.columns
+                f"{column_schema.name}: {column_schema.data_type}"
+                for column_schema in table_schema.column_schemas
             )
-            lines.append(f"  Table: {table.name} (Columns: {columns})")
+            lines.append(f"  Table: {table_schema.name} (Columns: {columns})")
         return "\n".join(lines)
