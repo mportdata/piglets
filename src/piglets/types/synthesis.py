@@ -2,7 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from .database import Database, Table
+from .database import DatabaseSchema, TableSchema
 from .queries import QueryResults
 
 
@@ -51,33 +51,39 @@ class SynthesisResult(BaseModel):
         description="Whether synthesis needs exploration or is confirmed."
     )
 
-    def to_database_type(self, database: Database) -> Database:
-        """Convert selected schema output to a Database using known schema only."""
-        selected_tables = []
-        tables_by_name = {table.name: table for table in database.tables}
+    def to_database_schema(self, database_schema: DatabaseSchema) -> DatabaseSchema:
+        """Convert selected schema output to a DatabaseSchema using known schema only."""
+        selected_table_schemas = []
+        table_schemas_by_name = {
+            table_schema.name: table_schema
+            for table_schema in database_schema.table_schemas
+        }
 
         for table_name, refined_table in self.refined_schema.items():
-            source_table = tables_by_name.get(table_name)
-            if source_table is None:
+            source_table_schema = table_schemas_by_name.get(table_name)
+            if source_table_schema is None:
                 continue
 
             selected_column_names = {
                 column.column_name
                 for column in refined_table.relevant_columns
             }
-            selected_columns = [
-                column for column in source_table.columns
-                if column.name in selected_column_names
+            selected_column_schemas = [
+                column_schema for column_schema in source_table_schema.column_schemas
+                if column_schema.name in selected_column_names
             ]
-            if selected_columns:
-                selected_tables.append(
-                    Table(name=source_table.name, columns=selected_columns)
+            if selected_column_schemas:
+                selected_table_schemas.append(
+                    TableSchema(
+                        name=source_table_schema.name,
+                        column_schemas=selected_column_schemas,
+                    )
                 )
 
-        return Database(
-            name=database.name,
-            database_type=database.database_type,
-            tables=selected_tables,
+        return DatabaseSchema(
+            name=database_schema.name,
+            database_type=database_schema.database_type,
+            table_schemas=selected_table_schemas,
         )
 
 

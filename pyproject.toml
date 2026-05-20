@@ -1,6 +1,6 @@
 [project]
 name = "piglets"
-version = "0.1.17"
+version = "0.1.18"
 description = "A modular text-to-SQL toolkit."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -130,7 +130,7 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [tool.setuptools.package-data]
-"piglets.planning.logical_planning" = ["*.md"]
+"piglets.capabilities.hypothesis_generation.techniques.logical_planning" = ["*.md"]
 "piglets.policies" = ["prompts/*.md"]
 
 [tool.pytest.ini_options]

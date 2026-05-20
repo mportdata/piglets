@@ -48,15 +48,18 @@ uv add "piglets[bigquery]"
 Use `gpt-5.2` to generate 3 logical plans from a natural language query.
 
 ```python
-from piglets import LogicalPlanner
+from piglets import LogicalPlanner, Question
 
-# initialise a logical planner
-logical_planner = LogicalPlanner('gpt-5.2')
+question = Question(
+    natural_language_question="What was the average number of piglets per week for Q4 2025?"
+)
+
+# initialise a logical planner configured for 3 samples
+logical_planner = LogicalPlanner('gpt-5.2', num_samples=3)
 
 # generate 3 logical plan samples and aggregate them
 logical_plan = logical_planner.plan(
-    natural_language_query="What was the average number of piglets per week for Q4 2025?",
-    num_samples=3,
+    question=question,
 )
 
 # print the aggregated logical plan
@@ -92,13 +95,13 @@ database_connector = DatabaseConnector(
     ),
 )
 
-database = database_connector.get_database_schema()
+database_schema = database_connector.get_database_schema()
 
-print(database.name)
-for table in database.tables:
-    print(table.name)
-    for column in table.columns:
-        print(f"- {column.name} ({column.data_type})")
+print(database_schema.name)
+for table_schema in database_schema.table_schemas:
+    print(table_schema.name)
+    for column_schema in table_schema.column_schemas:
+        print(f"- {column_schema.name} ({column_schema.data_type})")
 ```
 
 BigQuery connections can include an explicit GCP project ID:
@@ -135,7 +138,7 @@ database_connector = DatabaseConnector(
         database="example.db",
     ),
 )
-database = database_connector.get_database_schema()
+database_schema = database_connector.get_database_schema()
 ```
 
 For a backend with a Piglets helper class, pass that URL object directly:
@@ -152,22 +155,23 @@ database_connector = DatabaseConnector(
         schema="TPCH_SF1",
     ),
 )
-database = database_connector.get_database_schema()
+database_schema = database_connector.get_database_schema()
 ```
 
 ### Dual-pathway pruning
 
-Use `Pruner` to reduce a database schema with both preservation and deletion signals. The preservation pathway selects tables and columns that look useful for the query. The deletion pathway removes tables and columns that look irrelevant. `dual_pathway_pruning()` combines both paths into a final `Database` schema.
+Use `Pruner` to reduce a search space with both preservation and deletion signals. The preservation pathway selects tables and columns that look useful for the query. The deletion pathway removes tables and columns that look irrelevant. `dual_pathway_pruning()` combines both paths into a final `SearchSpace`.
 
 ```python
-from piglets import BigQueryURL, DatabaseConnector, LogicalPlanner, Pruner
+from piglets import BigQueryURL, DatabaseConnector, LogicalPlanner, Pruner, Question, SearchSpace
 
-question = "Which tags saw the largest increase in average answer score from 2022 to 2023, considering only questions with at least 5 answers?"
+question = Question(
+    natural_language_question="Which tags saw the largest increase in average answer score from 2022 to 2023, considering only questions with at least 5 answers?"
+)
 
-logical_planner = LogicalPlanner("gpt-5.2")
+logical_planner = LogicalPlanner("gpt-5.2", num_samples=3)
 logical_plan = logical_planner.plan(
-    natural_language_query=question,
-    num_samples=3,
+    question=question,
 )
 
 database_connector = DatabaseConnector(
@@ -175,34 +179,37 @@ database_connector = DatabaseConnector(
         dataset="stack_overflow",
     ),
 )
-database = database_connector.get_database_schema()
+search_space = database_connector.add_to_search_space(SearchSpace())
 
 pruner = Pruner(model_name="gpt-5.2")
-pruned_database = pruner.dual_pathway_pruning(
-    natural_language_query=question,
-    database=database,
+pruned_search_space = pruner.dual_pathway_pruning(
+    question=question,
+    search_space=search_space,
     logical_plan=logical_plan,
 )
 
-print(pruned_database.export_as_string())
+print(pruned_search_space.database_schema.export_as_string())
 ```
 
 ### Semantic Linking
 
-You can use `SemanticLinker` to combine a `Database` and a `LogicalPlan` into schema-specific instructions.
+You can use `SemanticLinker` to combine a `SearchSpace` and a `LogicalPlan` into schema-specific instructions.
 
 ```python
-from piglets import SemanticLinker
+from piglets import Question, SearchSpace, SemanticLinker
+
+question = Question(natural_language_question=QUESTION)
+search_space = database_connector.add_to_search_space(SearchSpace())
 
 semantic_linker = SemanticLinker(model_name=MODEL_NAME)
 
 semantic_linking_result = semantic_linker.link(
-    natural_language_query=QUESTION,
-    database=database,
+    question=question,
+    search_space=search_space,
     logical_plan=logical_plan,
 )
 ```
-Here `database` is a `Database` and `logical_plan` is a `LogicalPlan` or `AggregatePlan`.
+Here `search_space` is a `SearchSpace` and `logical_plan` is a `LogicalPlan` or `AggregatePlan`.
 
 The `semantic_linking_result` is of type `SemanticLinkingResult` and includes the following fields:
 - `database_structure`: Overview of the database structure relevant to the user query.

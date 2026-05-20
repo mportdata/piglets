@@ -2,14 +2,14 @@ from piglets.semantic_linking import SemanticLinker
 
 def test_semantic_linking(
         model_name,
-        natural_language_query,
+        question,
         logical_plan,
-        duckdb_database,
+        duckdb_search_space,
     ):
     linker = SemanticLinker(model_name=model_name)
     linking_result = linker.link(
-        natural_language_query=natural_language_query,
-        database=duckdb_database,
+        question=question,
+        search_space=duckdb_search_space,
         logical_plan=logical_plan,
     )
     

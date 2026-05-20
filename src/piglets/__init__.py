@@ -15,13 +15,16 @@ from .semantic_linking import SemanticLinker as SemanticLinker
 from .synthesizing import Synthesizer as Synthesizer
 from .types import (
     AggregatePlan as AggregatePlan,
-    Database as Database,
+    ColumnSchema as ColumnSchema,
+    DatabaseSchema as DatabaseSchema,
     DatabaseProfileResult as DatabaseProfileResult,
     DeletionColumns as DeletionColumns,
     DeletionSet as DeletionSet,
     LogicalPlan as LogicalPlan,
     LogicalPlans as LogicalPlans,
     LogicalSteps as LogicalSteps,
+    Question as Question,
+    SearchSpace as SearchSpace,
     PreservationColumns as PreservationColumns,
     PreservationSet as PreservationSet,
     ProfilingQuery as ProfilingQuery,
@@ -40,7 +43,7 @@ from .types import (
     SynthesisRunResult as SynthesisRunResult,
     TableProfileColumnResult as TableProfileColumnResult,
     TableProfileResult as TableProfileResult,
-    Table as Table,
+    TableSchema as TableSchema,
 )
 
 __all__ = [
@@ -62,13 +65,16 @@ __all__ = [
     "SemanticRules",
     # Types
     "AggregatePlan",
-    "Database",
+    "ColumnSchema",
+    "DatabaseSchema",
     "DatabaseProfileResult",
     "DeletionColumns",
     "DeletionSet",
     "LogicalPlan",
     "LogicalPlans",
     "LogicalSteps",
+    "Question",
+    "SearchSpace",
     "PreservationColumns",
     "PreservationSet",
     "PruningColumns",
@@ -85,7 +91,7 @@ __all__ = [
     "SynthesisRunResult",
     "TableProfileColumnResult",
     "TableProfileResult",
-    "Table",
+    "TableSchema",
     # Pruning
     "Pruner",
     # Profiling

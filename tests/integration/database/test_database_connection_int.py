@@ -1,22 +1,22 @@
-from piglets.types import Database, Column, QueryResult, Table
+from piglets.types import DatabaseSchema, ColumnSchema, QueryResult, TableSchema
 
 
-def test_duckdb_connector_get_database_schema(duckdb_database):
-    database_schema: Database = duckdb_database
+def test_duckdb_connector_get_database_schema(duckdb_database_schema):
+    database_schema: DatabaseSchema = duckdb_database_schema
 
-    assert isinstance(database_schema, Database)
+    assert isinstance(database_schema, DatabaseSchema)
     assert database_schema.name.endswith("tpch_sf001.duckdb")
     assert database_schema.database_type == "DuckDB"
-    assert len(database_schema.tables) > 0
-    assert all(isinstance(table, Table) for table in database_schema.tables)
-    for table in database_schema.tables:
-        assert len(table.columns) > 0
-        assert all(isinstance(column, Column) for column in table.columns)
-        assert all(isinstance(column.name, str) for column in table.columns)
-        assert all(isinstance(column.data_type, str) for column in table.columns)
+    assert len(database_schema.table_schemas) > 0
+    assert all(isinstance(table, TableSchema) for table in database_schema.table_schemas)
+    for table in database_schema.table_schemas:
+        assert len(table.column_schemas) > 0
+        assert all(isinstance(column, ColumnSchema) for column in table.column_schemas)
+        assert all(isinstance(column.name, str) for column in table.column_schemas)
+        assert all(isinstance(column.data_type, str) for column in table.column_schemas)
 
-def test_duckdb_connector_export_database_as_string(duckdb_database):
-    database_schema: Database = duckdb_database
+def test_duckdb_connector_export_database_as_string(duckdb_database_schema):
+    database_schema: DatabaseSchema = duckdb_database_schema
     database_string = database_schema.export_as_string()
     assert isinstance(database_string, str)
     assert "Database:" in database_string
@@ -62,30 +62,30 @@ def test_duckdb_query_result_to_string(duckdb_connector):
     assert "... truncated 1 rows" in result_string
 
 
-def test_bigquery_connector_get_database_schema(bigquery_database):
-    database_schema: Database = bigquery_database
+def test_bigquery_connector_get_database_schema(bigquery_database_schema):
+    database_schema: DatabaseSchema = bigquery_database_schema
 
-    assert isinstance(database_schema, Database)
+    assert isinstance(database_schema, DatabaseSchema)
     assert database_schema.database_type == "BigQuery"
-    assert len(database_schema.tables) > 0
-    assert all(isinstance(table, Table) for table in database_schema.tables)
-    for table in database_schema.tables:
-        assert len(table.columns) > 0
-        assert all(isinstance(column, Column) for column in table.columns)
-        assert all(isinstance(column.name, str) for column in table.columns)
-        assert all(isinstance(column.data_type, str) for column in table.columns)
+    assert len(database_schema.table_schemas) > 0
+    assert all(isinstance(table, TableSchema) for table in database_schema.table_schemas)
+    for table in database_schema.table_schemas:
+        assert len(table.column_schemas) > 0
+        assert all(isinstance(column, ColumnSchema) for column in table.column_schemas)
+        assert all(isinstance(column.name, str) for column in table.column_schemas)
+        assert all(isinstance(column.data_type, str) for column in table.column_schemas)
 
 
 def test_snowflake_connector_get_database_schema(snowflake_connector):
-    database_schema: Database = snowflake_connector.get_database_schema()
+    database_schema: DatabaseSchema = snowflake_connector.get_database_schema()
 
-    assert isinstance(database_schema, Database)
+    assert isinstance(database_schema, DatabaseSchema)
     assert database_schema.name == "SNOWFLAKE_SAMPLE_DATA.TPCH_SF1"
     assert database_schema.database_type == "Snowflake"
-    assert len(database_schema.tables) > 0
-    assert all(isinstance(table, Table) for table in database_schema.tables)
-    for table in database_schema.tables:
-        assert len(table.columns) > 0
-        assert all(isinstance(column, Column) for column in table.columns)
-        assert all(isinstance(column.name, str) for column in table.columns)
-        assert all(isinstance(column.data_type, str) for column in table.columns)
+    assert len(database_schema.table_schemas) > 0
+    assert all(isinstance(table, TableSchema) for table in database_schema.table_schemas)
+    for table in database_schema.table_schemas:
+        assert len(table.column_schemas) > 0
+        assert all(isinstance(column, ColumnSchema) for column in table.column_schemas)
+        assert all(isinstance(column.name, str) for column in table.column_schemas)
+        assert all(isinstance(column.data_type, str) for column in table.column_schemas)

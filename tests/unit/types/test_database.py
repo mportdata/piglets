@@ -1,15 +1,15 @@
 import pytest
 from pydantic import ValidationError
 
-from piglets.types import Column, Database, Table
+from piglets.types import ColumnSchema, DatabaseSchema, TableSchema
 
 
 def test_table_columns_to_string_formats_columns_with_description_placeholder():
-    table = Table(
+    table = TableSchema(
         name="users",
-        columns=[
-            Column(name="id", data_type="INTEGER"),
-            Column(name="email", data_type="VARCHAR"),
+        column_schemas=[
+            ColumnSchema(name="id", data_type="INTEGER"),
+            ColumnSchema(name="email", data_type="VARCHAR"),
         ],
     )
 
@@ -18,55 +18,55 @@ def test_table_columns_to_string_formats_columns_with_description_placeholder():
 
 def test_database_requires_database_type():
     with pytest.raises(ValidationError):
-        Database(name="example", tables=[])
+        DatabaseSchema(name="example", table_schemas=[])
 
 
 def test_database_subtract_removes_matching_tables_and_columns():
-    source_database = Database(
+    source_database = DatabaseSchema(
         name="example",
         database_type="DuckDB",
-        tables=[
-            Table(
+        table_schemas=[
+            TableSchema(
                 name="users",
-                columns=[
-                    Column(name="id", data_type="INTEGER"),
-                    Column(name="name", data_type="VARCHAR"),
-                    Column(name="email", data_type="VARCHAR"),
+                column_schemas=[
+                    ColumnSchema(name="id", data_type="INTEGER"),
+                    ColumnSchema(name="name", data_type="VARCHAR"),
+                    ColumnSchema(name="email", data_type="VARCHAR"),
                 ],
             ),
-            Table(
+            TableSchema(
                 name="orders",
-                columns=[
-                    Column(name="id", data_type="INTEGER"),
-                    Column(name="user_id", data_type="INTEGER"),
-                    Column(name="total", data_type="NUMERIC"),
+                column_schemas=[
+                    ColumnSchema(name="id", data_type="INTEGER"),
+                    ColumnSchema(name="user_id", data_type="INTEGER"),
+                    ColumnSchema(name="total", data_type="NUMERIC"),
                 ],
             ),
-            Table(
+            TableSchema(
                 name="audit_log",
-                columns=[
-                    Column(name="id", data_type="INTEGER"),
-                    Column(name="event", data_type="VARCHAR"),
+                column_schemas=[
+                    ColumnSchema(name="id", data_type="INTEGER"),
+                    ColumnSchema(name="event", data_type="VARCHAR"),
                 ],
             ),
         ],
     )
-    database_to_subtract = Database(
+    database_to_subtract = DatabaseSchema(
         name="example",
         database_type="DuckDB",
-        tables=[
-            Table(
+        table_schemas=[
+            TableSchema(
                 name="users",
-                columns=[
-                    Column(name="email", data_type="VARCHAR"),
+                column_schemas=[
+                    ColumnSchema(name="email", data_type="VARCHAR"),
                 ],
             ),
-            Table(
+            TableSchema(
                 name="orders",
-                columns=[
-                    Column(name="id", data_type="INTEGER"),
-                    Column(name="user_id", data_type="INTEGER"),
-                    Column(name="total", data_type="NUMERIC"),
+                column_schemas=[
+                    ColumnSchema(name="id", data_type="INTEGER"),
+                    ColumnSchema(name="user_id", data_type="INTEGER"),
+                    ColumnSchema(name="total", data_type="NUMERIC"),
                 ],
             ),
         ],
@@ -75,22 +75,22 @@ def test_database_subtract_removes_matching_tables_and_columns():
     remaining_database = source_database.subtract(database_to_subtract)
 
     assert remaining_database.database_type == "DuckDB"
-    assert remaining_database == Database(
+    assert remaining_database == DatabaseSchema(
         name="example",
         database_type="DuckDB",
-        tables=[
-            Table(
+        table_schemas=[
+            TableSchema(
                 name="users",
-                columns=[
-                    Column(name="id", data_type="INTEGER"),
-                    Column(name="name", data_type="VARCHAR"),
+                column_schemas=[
+                    ColumnSchema(name="id", data_type="INTEGER"),
+                    ColumnSchema(name="name", data_type="VARCHAR"),
                 ],
             ),
-            Table(
+            TableSchema(
                 name="audit_log",
-                columns=[
-                    Column(name="id", data_type="INTEGER"),
-                    Column(name="event", data_type="VARCHAR"),
+                column_schemas=[
+                    ColumnSchema(name="id", data_type="INTEGER"),
+                    ColumnSchema(name="event", data_type="VARCHAR"),
                 ],
             ),
         ],
@@ -98,42 +98,42 @@ def test_database_subtract_removes_matching_tables_and_columns():
 
 
 def test_database_union_combines_tables_and_columns_without_duplicates():
-    left_database = Database(
+    left_database = DatabaseSchema(
         name="example",
         database_type="DuckDB",
-        tables=[
-            Table(
+        table_schemas=[
+            TableSchema(
                 name="users",
-                columns=[
-                    Column(name="id", data_type="INTEGER"),
-                    Column(name="name", data_type="VARCHAR"),
+                column_schemas=[
+                    ColumnSchema(name="id", data_type="INTEGER"),
+                    ColumnSchema(name="name", data_type="VARCHAR"),
                 ],
             ),
-            Table(
+            TableSchema(
                 name="audit_log",
-                columns=[
-                    Column(name="id", data_type="INTEGER"),
-                    Column(name="event", data_type="VARCHAR"),
+                column_schemas=[
+                    ColumnSchema(name="id", data_type="INTEGER"),
+                    ColumnSchema(name="event", data_type="VARCHAR"),
                 ],
             ),
         ],
     )
-    right_database = Database(
+    right_database = DatabaseSchema(
         name="example",
         database_type="DuckDB",
-        tables=[
-            Table(
+        table_schemas=[
+            TableSchema(
                 name="users",
-                columns=[
-                    Column(name="id", data_type="INTEGER"),
-                    Column(name="email", data_type="VARCHAR"),
+                column_schemas=[
+                    ColumnSchema(name="id", data_type="INTEGER"),
+                    ColumnSchema(name="email", data_type="VARCHAR"),
                 ],
             ),
-            Table(
+            TableSchema(
                 name="orders",
-                columns=[
-                    Column(name="id", data_type="INTEGER"),
-                    Column(name="total", data_type="NUMERIC"),
+                column_schemas=[
+                    ColumnSchema(name="id", data_type="INTEGER"),
+                    ColumnSchema(name="total", data_type="NUMERIC"),
                 ],
             ),
         ],
@@ -142,30 +142,30 @@ def test_database_union_combines_tables_and_columns_without_duplicates():
     union_database = left_database.union(right_database)
 
     assert union_database.database_type == "DuckDB"
-    assert union_database == Database(
+    assert union_database == DatabaseSchema(
         name="example",
         database_type="DuckDB",
-        tables=[
-            Table(
+        table_schemas=[
+            TableSchema(
                 name="users",
-                columns=[
-                    Column(name="id", data_type="INTEGER"),
-                    Column(name="name", data_type="VARCHAR"),
-                    Column(name="email", data_type="VARCHAR"),
+                column_schemas=[
+                    ColumnSchema(name="id", data_type="INTEGER"),
+                    ColumnSchema(name="name", data_type="VARCHAR"),
+                    ColumnSchema(name="email", data_type="VARCHAR"),
                 ],
             ),
-            Table(
+            TableSchema(
                 name="audit_log",
-                columns=[
-                    Column(name="id", data_type="INTEGER"),
-                    Column(name="event", data_type="VARCHAR"),
+                column_schemas=[
+                    ColumnSchema(name="id", data_type="INTEGER"),
+                    ColumnSchema(name="event", data_type="VARCHAR"),
                 ],
             ),
-            Table(
+            TableSchema(
                 name="orders",
-                columns=[
-                    Column(name="id", data_type="INTEGER"),
-                    Column(name="total", data_type="NUMERIC"),
+                column_schemas=[
+                    ColumnSchema(name="id", data_type="INTEGER"),
+                    ColumnSchema(name="total", data_type="NUMERIC"),
                 ],
             ),
         ],

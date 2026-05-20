@@ -6,25 +6,32 @@ from langchain.chat_models import init_chat_model
 from piglets.database import DatabaseConnector
 from piglets.policies import SemanticRules
 from piglets.types import (
-    Database,
     DatabaseProfileResult,
     ProfilingQueries,
     ProfilingQuery,
+    Question,
     QueryResult,
     QueryResults,
+    SearchSpace,
     SemanticLinkingResult,
-    Table,
+    TableSchema,
     TableProfileResult,
 )
 
 logger = logging.getLogger(__name__)
 
 
+def _database_schema_from_search_space(search_space: SearchSpace):
+    if search_space.database_schema is None:
+        raise ValueError("search_space must contain a database_schema")
+    return search_space.database_schema
+
+
 class Profiler():
     def __init__(
         self,
         model_name: str,
-        database: Database,
+        search_space: SearchSpace,
         model_provider: str = None,
         rules: SemanticRules | None = None,
         max_query_repair_attempts: int = 1,
@@ -35,34 +42,36 @@ class Profiler():
             )
 
         self.model_name = model_name
-        self.database = database
+        self.search_space = search_space
+        self.database_schema = _database_schema_from_search_space(search_space)
         self.model_provider = model_provider
         self.rules = rules or SemanticRules()
         self.max_query_repair_attempts = max_query_repair_attempts
 
     def _generate_table_profiler_queries(
         self,
-        natural_language_query: str,
-        table: Table,
+        question: Question,
+        table_schema: TableSchema,
         semantic_linking_result: SemanticLinkingResult | None = None,
     ) -> ProfilingQueries:
-        logger.debug("Generating profiling queries for table %s", table.name)
+        logger.debug("Generating profiling queries for table %s", table_schema.name)
+        natural_language_question = question.natural_language_question
 
         llm = init_chat_model(model=self.model_name, model_provider=self.model_provider)
         llm = llm.with_structured_output(ProfilingQueries)
         critical_rules = self.rules.critical_rules_to_string()
-        sql_type = f"{self.database.database_type.upper()} SQL"
+        sql_type = f"{self.database_schema.database_type.upper()} SQL"
         semantic_table_functions_lower = (
             {k.lower(): v for k, v in semantic_linking_result.table_functions.items()}
             if semantic_linking_result
             else {}
         )
         semantic_table_function = semantic_table_functions_lower.get(
-            table.name.lower(),
+            table_schema.name.lower(),
             "Unknown Role",
         )
 
-        # TODO: Include column descriptions here once Column supports them.
+        # TODO: Include column descriptions here once ColumnSchema supports them.
         DATA_PROFILE_QUERY_GENERATION_PROMPT = f"""
             *** TASK CONTEXT ***
             You are an agent exploring a database table to verify its
@@ -71,12 +80,12 @@ class Profiler():
             table fits its anticipated role.
             {critical_rules}
 
-            *** TARGET TABLE: {table.name} ***
+            *** TARGET TABLE: {table_schema.name} ***
             Columns:
-            {table.columns_to_string()}
+            {table_schema.columns_to_string()}
 
             *** USER QUESTION ***
-            {natural_language_query}
+            {natural_language_question}
 
             *** ANTICIPATED ROLE ***
             This table was identified as: {semantic_table_function}. Use this to
@@ -85,7 +94,7 @@ class Profiler():
             *** YOUR MISSION ***
             Generate 3-8 {sql_type} queries to investigate. **Focus on
             understanding the table’s semantics and utility.**
-            Each query must profile only the target table, {table.name}.
+            Each query must profile only the target table, {table_schema.name}.
             Do not join to, reference, or infer data from any other table.
 
             **Motivation for Exploration**:
@@ -118,7 +127,7 @@ class Profiler():
         logger.debug(
             "Generated %s profiling queries for table %s",
             len(profiling_queries.query),
-            table.name,
+            table_schema.name,
         )
 
         return profiling_queries
@@ -138,15 +147,16 @@ class Profiler():
 
     def _repair_profiling_query(
         self,
-        natural_language_query: str,
-        table: Table,
+        question: Question,
+        table_schema: TableSchema,
         failed_query: ProfilingQuery,
         error: Exception,
     ) -> ProfilingQuery:
-        logger.debug("Repairing profiling query for table %s", table.name)
+        logger.debug("Repairing profiling query for table %s", table_schema.name)
+        natural_language_question = question.natural_language_question
         llm = init_chat_model(model=self.model_name, model_provider=self.model_provider)
         llm = llm.with_structured_output(ProfilingQuery)
-        sql_type = f"{self.database.database_type.upper()} SQL"
+        sql_type = f"{self.database_schema.database_type.upper()} SQL"
 
         QUERY_REPAIR_PROMPT = f"""
             *** TASK CONTEXT ***
@@ -156,12 +166,12 @@ class Profiler():
             *** SQL DIALECT ***
             {sql_type}
 
-            *** TARGET TABLE: {table.name} ***
+            *** TARGET TABLE: {table_schema.name} ***
             Columns:
-            {table.columns_to_string()}
+            {table_schema.columns_to_string()}
 
             *** USER QUESTION ***
-            {natural_language_query}
+            {natural_language_question}
 
             *** ORIGINAL MOTIVATION ***
             {failed_query.motivation}
@@ -174,7 +184,7 @@ class Profiler():
 
             *** REPAIR RULES ***
             Return exactly one valid {sql_type} query.
-            The query must profile only the target table, {table.name}.
+            The query must profile only the target table, {table_schema.name}.
             Do not join to, reference, or infer data from any other table.
             Use only columns listed in the target table schema.
             Preserve the original motivation unless it is no longer accurate.
@@ -192,8 +202,8 @@ class Profiler():
         self,
         database_connector: DatabaseConnector,
         profiling_queries: ProfilingQueries,
-        natural_language_query: str,
-        table: Table,
+        question: Question,
+        table_schema: TableSchema,
     ) -> QueryResults:
         queries = list(profiling_queries.query)
         if not queries:
@@ -235,7 +245,7 @@ class Profiler():
             if repair_attempt >= self.max_query_repair_attempts:
                 logger.error(
                     "Failed to execute profiling query for table %s after %s repair attempts: %s",
-                    table.name,
+                    table_schema.name,
                     repair_attempt,
                     type(failed_queries[0][2]).__name__,
                 )
@@ -245,7 +255,7 @@ class Profiler():
             logger.warning(
                 "Repairing %s failed profiling queries for table %s, attempt %s of %s",
                 len(failed_queries),
-                table.name,
+                table_schema.name,
                 repair_attempt,
                 self.max_query_repair_attempts,
             )
@@ -253,8 +263,8 @@ class Profiler():
                 (
                     index,
                     self._repair_profiling_query(
-                        natural_language_query=natural_language_query,
-                        table=table,
+                        question=question,
+                        table_schema=table_schema,
                         failed_query=query,
                         error=error,
                     ),
@@ -278,23 +288,24 @@ class Profiler():
 
     def _profile_table_from_query_results(
         self,
-        natural_language_query: str,
+        question: Question,
         query_results: QueryResults,
-        table: Table,
+        table_schema: TableSchema,
     ) -> TableProfileResult:
-        logger.debug("Profiling table %s from query results", table.name)
+        logger.debug("Profiling table %s from query results", table_schema.name)
+        natural_language_question = question.natural_language_question
         llm = init_chat_model(model=self.model_name, model_provider=self.model_provider)
         llm = llm.with_structured_output(TableProfileResult)
 
         TABLE_PROFILE_PROMPT = f"""
             *** TASK ***
             Based on the exploration history and results above,
-            determine if table {table.name} is RELEVANT to the User
+            determine if table {table_schema.name} is RELEVANT to the User
             Question.
             *** EXPLORATION EVIDENCE ***
             {query_results.to_string()}
             *** USER QUESTION ***
-            {natural_language_query}
+            {natural_language_question}
             *** DECISION GUIDELINES ***
             - **Direct Match**: Contains the specific answer data.
             - **Bridge Table**: Contains IDs needed to join other relevant tables (CRITICAL: Keep even if no other useful data).
@@ -304,7 +315,7 @@ class Profiler():
             needed for aggregation (e.g., score for AVG, price for
             SUM).
             *** OUTPUT GUIDELINES ***
-            - table_name: The exact target table name, {table.name}.
+            - table_name: The exact target table name, {table_schema.name}.
             - relevant: Whether this table is relevant to the user question.
             - relevant_columns: Columns relevant to the user question.
             - column_name: The relevant column name.
@@ -326,7 +337,7 @@ class Profiler():
             Example shape:
             ```json
                 {{
-                    "table_name": "{table.name}",
+                    "table_name": "{table_schema.name}",
                     "relevant": true,
                     "relevant_columns": [
                         {{
@@ -342,10 +353,10 @@ class Profiler():
         """
         
         table_profile_result = llm.invoke(TABLE_PROFILE_PROMPT)
-        table_profile_result.table_name = table.name
+        table_profile_result.table_name = table_schema.name
         logger.debug(
             "Profiled table %s from query results: relevant=%s, relevant_columns=%s",
-            table.name,
+            table_schema.name,
             table_profile_result.relevant,
             len(table_profile_result.relevant_columns),
         )
@@ -354,31 +365,31 @@ class Profiler():
     
     def profile_table(
             self,
-            natural_language_query: str,
-            table: Table,
+            question: Question,
+            table_schema: TableSchema,
             database_connector: DatabaseConnector,
             semantic_linking_result: SemanticLinkingResult | None = None,
     ) -> TableProfileResult:
-        logger.info("Profiling table %s", table.name)
+        logger.info("Profiling table %s", table_schema.name)
         profiling_queries = self._generate_table_profiler_queries(
-            natural_language_query=natural_language_query,
-            table=table,
+            question=question,
+            table_schema=table_schema,
             semantic_linking_result=semantic_linking_result,
         )
         query_results = self._execute_table_profiling_queries(
             database_connector=database_connector,
             profiling_queries=profiling_queries,
-            natural_language_query=natural_language_query,
-            table=table,
+            question=question,
+            table_schema=table_schema,
         )
         table_profile_result = self._profile_table_from_query_results(
-            natural_language_query=natural_language_query,
+            question=question,
             query_results=query_results,
-            table=table,
+            table_schema=table_schema,
         )
         logger.info(
             "Profiled table %s: relevant=%s, relevant_columns=%s",
-            table.name,
+            table_schema.name,
             table_profile_result.relevant,
             len(table_profile_result.relevant_columns),
         )
@@ -386,51 +397,52 @@ class Profiler():
 
     def profile_database(
         self,
-        database: Database,
+        search_space: SearchSpace,
         database_connector: DatabaseConnector,
-        natural_language_query: str,
+        question: Question,
         semantic_linking_result: SemanticLinkingResult | None = None
     ) -> DatabaseProfileResult:
+        database_schema = _database_schema_from_search_space(search_space)
         logger.info(
             "Profiling database %s with %s tables",
-            database.name,
-            len(database.tables),
+            database_schema.name,
+            len(database_schema.table_schemas),
         )
         database_profile_result = DatabaseProfileResult(
-            database_type=database.database_type,
-            database_name=database.name,
+            database_type=database_schema.database_type,
+            database_name=database_schema.name,
         )
-        tables = list(database.tables)
-        if not tables:
-            logger.info("Profiled database %s with 0 table profiles", database.name)
+        table_schemas = list(database_schema.table_schemas)
+        if not table_schemas:
+            logger.info("Profiled database %s with 0 table profiles", database_schema.name)
             return database_profile_result
 
-        max_workers = min(len(tables), 4)
+        max_workers = min(len(table_schemas), 4)
         logger.debug(
             "Profiling %s database tables with %s workers",
-            len(tables),
+            len(table_schemas),
             max_workers,
         )
 
-        def profile_table(table: Table) -> TableProfileResult:
+        def profile_table(table_schema: TableSchema) -> TableProfileResult:
             return self.profile_table(
-                natural_language_query=natural_language_query,
-                table=table,
+                question=question,
+                table_schema=table_schema,
                 database_connector=database_connector,
                 semantic_linking_result=semantic_linking_result,
             )
 
         try:
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                table_profile_results = list(executor.map(profile_table, tables))
+                table_profile_results = list(executor.map(profile_table, table_schemas))
         except Exception:
-            logger.exception("Failed to profile database %s", database.name)
+            logger.exception("Failed to profile database %s", database_schema.name)
             raise
 
         database_profile_result.table_profile_results.extend(table_profile_results)
         logger.info(
             "Profiled database %s with %s table profiles",
-            database.name,
+            database_schema.name,
             len(database_profile_result.table_profile_results),
         )
         return database_profile_result

@@ -4,9 +4,10 @@ from langchain.chat_models import init_chat_model
 
 from piglets.database import DatabaseConnector
 from piglets.types import (
-    Database,
     DatabaseProfileResult,
+    Question,
     QueryResults,
+    SearchSpace,
     SemanticLinkingResult,
     SynthesisRound,
     SynthesisResult,
@@ -17,28 +18,36 @@ from piglets.types import (
 logger = logging.getLogger(__name__)
 
 
+def _database_schema_from_search_space(search_space: SearchSpace):
+    if search_space.database_schema is None:
+        raise ValueError("search_space must contain a database_schema")
+    return search_space.database_schema
+
+
 class Synthesizer():
     def __init__(
             self,
-            database: Database,
+            search_space: SearchSpace,
             database_connector: DatabaseConnector,
             model_name: str,
             model_provider: str | None,
     ):
-        self.database: Database = database
+        self.search_space: SearchSpace = search_space
+        self.database_schema = _database_schema_from_search_space(search_space)
         self.database_connector: DatabaseConnector = database_connector
         self.model_name: str = model_name
         self.model_provider = model_provider
 
     def _build_synthesis_prompt(
         self,
-        natural_language_question: str,
+        question: Question,
         semantic_linking_result: SemanticLinkingResult,
         database_profile_result: DatabaseProfileResult,
         max_refine_rounds: int,
         round_number: int,
         previous_rounds: list[SynthesisRound],
     ) -> str:
+        natural_language_question = question.natural_language_question
         previous_rounds_context = self._previous_rounds_to_string(previous_rounds)
         return f"""
             *** TASK CONTEXT ***
@@ -51,7 +60,7 @@ class Synthesizer():
             *** SEMANTIC ANALYSIS ***
             {semantic_linking_result}
             *** SCHEMA STATUS ***
-            {database_profile_result.to_string(database=self.database)}
+            {database_profile_result.to_string(database_schema=self.database_schema)}
             {previous_rounds_context}
             *** YOUR MISSION ***
             Determine the final list of columns required to write the
@@ -167,7 +176,7 @@ class Synthesizer():
 
     def synthesize_observations(
             self,
-            natural_language_question: str,
+            question: Question,
             semantic_linking_result: SemanticLinkingResult,
             database_profile_result: DatabaseProfileResult,
             max_refine_rounds: int = 10,
@@ -184,7 +193,7 @@ class Synthesizer():
 
         for round_number in range(1, max_refine_rounds + 1):
             prompt = self._build_synthesis_prompt(
-                natural_language_question=natural_language_question,
+                question=question,
                 semantic_linking_result=semantic_linking_result,
                 database_profile_result=database_profile_result,
                 max_refine_rounds=max_refine_rounds,

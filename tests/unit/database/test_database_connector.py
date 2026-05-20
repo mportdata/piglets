@@ -10,7 +10,7 @@ from piglets.database.database_connector import (
     database_type_from_connection,
 )
 from piglets.database.url import BigQueryURL, DuckDBURL, MotherDuckURL, SnowflakeURL
-from piglets.types import ProfilingQuery, QueryResult, SQLQuery
+from piglets.types import ProfilingQuery, QueryResult, SearchSpace, SQLQuery
 
 
 class FakeInspector:
@@ -232,6 +232,28 @@ def test_database_connector_execute_query_accepts_string(tmp_path):
     assert result.columns == ["id", "status"]
     assert result.rows == [(1, "open"), (2, "closed")]
     assert result.row_count == 2
+
+
+def test_database_connector_adds_schema_to_empty_search_space(tmp_path):
+    connector = _sqlite_connector_with_orders(tmp_path)
+
+    search_space = connector.add_to_search_space(SearchSpace())
+
+    assert isinstance(search_space, SearchSpace)
+    assert search_space.database_schema is not None
+    assert search_space.database_schema.name.endswith("orders.db")
+    assert search_space.database_schema.database_type == "SQLite"
+    assert [table.name for table in search_space.database_schema.table_schemas] == [
+        "orders",
+    ]
+
+
+def test_database_connector_rejects_populated_search_space(tmp_path):
+    connector = _sqlite_connector_with_orders(tmp_path)
+    search_space = connector.add_to_search_space(SearchSpace())
+
+    with pytest.raises(ValueError, match="Multi-database search spaces"):
+        connector.add_to_search_space(search_space)
 
 
 def test_database_connector_execute_query_accepts_sql_query(tmp_path):

@@ -1,8 +1,8 @@
 from piglets.types import (
-    Column,
-    Database,
+    ColumnSchema,
+    DatabaseSchema,
     DatabaseProfileResult,
-    Table,
+    TableSchema,
     TableProfileColumnResult,
     TableProfileResult,
 )
@@ -30,11 +30,11 @@ def test_table_profile_result_can_describe_relevant_columns():
 
 
 def test_table_profile_result_to_string_renders_schema_status_block():
-    table = Table(
+    table = TableSchema(
         name="orders",
-        columns=[
-            Column(name="order_id", data_type="INTEGER"),
-            Column(name="status", data_type="VARCHAR"),
+        column_schemas=[
+            ColumnSchema(name="order_id", data_type="INTEGER"),
+            ColumnSchema(name="status", data_type="VARCHAR"),
         ],
     )
     result = TableProfileResult(
@@ -63,27 +63,27 @@ def test_table_profile_result_to_string_renders_schema_status_block():
 
 
 def test_database_profile_result_to_string_matches_by_table_name_and_marks_unknown():
-    database = Database(
+    database = DatabaseSchema(
         name="example",
         database_type="DuckDB",
-        tables=[
-            Table(
+        table_schemas=[
+            TableSchema(
                 name="orders",
-                columns=[
-                    Column(name="order_id", data_type="INTEGER"),
-                    Column(name="status", data_type="VARCHAR"),
+                column_schemas=[
+                    ColumnSchema(name="order_id", data_type="INTEGER"),
+                    ColumnSchema(name="status", data_type="VARCHAR"),
                 ],
             ),
-            Table(
+            TableSchema(
                 name="customers",
-                columns=[
-                    Column(name="customer_id", data_type="INTEGER"),
+                column_schemas=[
+                    ColumnSchema(name="customer_id", data_type="INTEGER"),
                 ],
             ),
-            Table(
+            TableSchema(
                 name="lineitem",
-                columns=[
-                    Column(name="order_id", data_type="INTEGER"),
+                column_schemas=[
+                    ColumnSchema(name="order_id", data_type="INTEGER"),
                 ],
             ),
         ],

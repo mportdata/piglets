@@ -1,24 +1,25 @@
 from piglets import (
-    Database, 
+    DatabaseSchema, 
     DeletionColumns,
     DeletionSet,
     PreservationColumns, 
     PreservationSet,
     Pruner,
-    Table
+    SearchSpace,
+    TableSchema
 )
 
 
 def test_get_tables_and_fields_to_preserve(
     model_name,
-    natural_language_query,
+    question,
     logical_plan,
-    duckdb_database,
+    duckdb_search_space,
 ):
     pruner = Pruner(model_name=model_name)
     fields_to_preserve = pruner.get_tables_and_fields_to_preserve(
-        natural_language_query=natural_language_query, 
-        database=duckdb_database,
+        question=question, 
+        search_space=duckdb_search_space,
         logical_plan=logical_plan
     )
 
@@ -37,14 +38,14 @@ def test_get_tables_and_fields_to_preserve(
 
 def test_get_tables_and_fields_to_delete(
     model_name,
-    natural_language_query,
+    question,
     logical_plan,
-    duckdb_database,
+    duckdb_search_space,
 ):
     pruner = Pruner(model_name=model_name)
     fields_to_delete = pruner.get_tables_and_fields_to_delete(
-        natural_language_query=natural_language_query,
-        database=duckdb_database,
+        question=question,
+        search_space=duckdb_search_space,
         logical_plan=logical_plan
     )
 
@@ -60,61 +61,66 @@ def test_get_tables_and_fields_to_delete(
         for column in col.columns
     )
 
-def test_preservation_set_to_database_type(
+def test_preservation_set_to_database_schema(
     model_name,
-    natural_language_query,
+    question,
     logical_plan,
-    duckdb_database,
+    duckdb_search_space,
+    duckdb_database_schema,
 ):
     pruner = Pruner(model_name=model_name)
     fields_to_preserve = pruner.get_tables_and_fields_to_preserve(
-        natural_language_query=natural_language_query, 
-        database=duckdb_database,
+        question=question, 
+        search_space=duckdb_search_space,
         logical_plan=logical_plan
     )
 
-    preserved_database = fields_to_preserve.to_database_type(duckdb_database)
+    preserved_database_schema = fields_to_preserve.to_database_schema(duckdb_database_schema)
 
-    assert isinstance(preserved_database, Database)
-    assert preserved_database.name == duckdb_database.name
-    assert preserved_database.database_type == duckdb_database.database_type
-    assert isinstance(preserved_database.tables, list)
-    assert all(isinstance(table, Table) for table in preserved_database.tables)
+    assert isinstance(preserved_database_schema, DatabaseSchema)
+    assert preserved_database_schema.name == duckdb_database_schema.name
+    assert preserved_database_schema.database_type == duckdb_database_schema.database_type
+    assert isinstance(preserved_database_schema.table_schemas, list)
+    assert all(isinstance(table, TableSchema) for table in preserved_database_schema.table_schemas)
 
 
-def test_deletion_set_to_database_type(
+def test_deletion_set_to_database_schema(
     model_name,
-    natural_language_query,
+    question,
     logical_plan,
-    duckdb_database,
+    duckdb_search_space,
+    duckdb_database_schema,
 ):
     pruner = Pruner(model_name=model_name)
     fields_to_delete = pruner.get_tables_and_fields_to_delete(
-        natural_language_query=natural_language_query,
-        database=duckdb_database,
+        question=question,
+        search_space=duckdb_search_space,
         logical_plan=logical_plan
     )
 
-    deleted_database = fields_to_delete.to_database_type(duckdb_database)
+    deleted_database_schema = fields_to_delete.to_database_schema(duckdb_database_schema)
 
-    assert isinstance(deleted_database, Database)
-    assert deleted_database.name == duckdb_database.name
-    assert deleted_database.database_type == duckdb_database.database_type
-    assert isinstance(deleted_database.tables, list)
-    assert all(isinstance(table, Table) for table in deleted_database.tables)
+    assert isinstance(deleted_database_schema, DatabaseSchema)
+    assert deleted_database_schema.name == duckdb_database_schema.name
+    assert deleted_database_schema.database_type == duckdb_database_schema.database_type
+    assert isinstance(deleted_database_schema.table_schemas, list)
+    assert all(isinstance(table, TableSchema) for table in deleted_database_schema.table_schemas)
 
 def test_dual_pathway_pruning(
     model_name,
-    natural_language_query,
+    question,
     logical_plan,
-    duckdb_database,
+    duckdb_search_space,
 ):
     pruner = Pruner(model_name=model_name)
-    pruned_database: Database = pruner.dual_pathway_pruning(
-        natural_language_query=natural_language_query,
-        database=duckdb_database,
+    pruned_search_space: SearchSpace = pruner.dual_pathway_pruning(
+        question=question,
+        search_space=duckdb_search_space,
         logical_plan=logical_plan
     )
+    pruned_database_schema = pruned_search_space.database_schema
 
-    assert isinstance(pruned_database, Database)
-    assert pruned_database.database_type == duckdb_database.database_type
+    assert isinstance(pruned_search_space, SearchSpace)
+    assert isinstance(pruned_database_schema, DatabaseSchema)
+    assert duckdb_search_space.database_schema is not None
+    assert pruned_database_schema.database_type == duckdb_search_space.database_schema.database_type

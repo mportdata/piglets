@@ -4,7 +4,14 @@ from typing import Any
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.engine.url import make_url
 
-from piglets.types import Column, Database, QueryResult, SQLQuery, Table
+from piglets.types import (
+    ColumnSchema,
+    DatabaseSchema,
+    QueryResult,
+    SearchSpace,
+    SQLQuery,
+    TableSchema,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -88,22 +95,38 @@ class DatabaseConnector():
         self.engine = create_engine(connection_url, **engine_kwargs)
         self.inspector = inspect(self.engine)
 
-    def get_database_schema(self) -> Database:
+    def get_database_schema(self) -> DatabaseSchema:
         """Returns the schema of the database."""
-        tables = []
+        table_schemas = []
         for table_name in self.inspector.get_table_names():
-            columns = []
+            column_schemas = []
             for column_info in self.inspector.get_columns(table_name):
                 # TODO: Populate column descriptions when metadata retrieval supports them.
-                column = Column(name=column_info["name"], data_type=str(column_info["type"]))
-                columns.append(column)
-            table = Table(name=table_name, columns=columns)
-            tables.append(table)
-        return Database(
+                column_schema = ColumnSchema(
+                    name=column_info["name"],
+                    data_type=str(column_info["type"]),
+                )
+                column_schemas.append(column_schema)
+            table_schema = TableSchema(
+                name=table_name,
+                column_schemas=column_schemas,
+            )
+            table_schemas.append(table_schema)
+        return DatabaseSchema(
             name=self.database_name,
             database_type=self.database_type,
-            tables=tables,
+            table_schemas=table_schemas,
         )
+
+    def add_to_search_space(self, search_space: SearchSpace) -> SearchSpace:
+        """Add this connector's database schema to an empty search space."""
+        if search_space.database_schema is not None:
+            raise ValueError(
+                "SearchSpace already contains a database_schema. "
+                "Multi-database search spaces are not supported yet."
+            )
+
+        return SearchSpace(database_schema=self.get_database_schema())
     
     def execute_query(self, query: SQLQuery | str) -> QueryResult:
         """Execute a SQL query and return a typed result."""

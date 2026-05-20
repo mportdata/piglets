@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 
-from .database import Database, Table
+from .database import DatabaseSchema, TableSchema
 
 
 class TableProfileColumnResult(BaseModel):
@@ -27,7 +27,7 @@ class TableProfileResult(BaseModel):
         description="Concise summary of what the table represents in context."
     )
 
-    def to_string(self, table: Table) -> str:
+    def to_string(self, table_schema: TableSchema) -> str:
         """Render table profile evidence in the APEX schema-status shape."""
         status = "[MARKED RELEVANT]" if self.relevant else "[MARKED IRRELEVANT]"
         relevant_columns_by_name = {
@@ -36,12 +36,12 @@ class TableProfileResult(BaseModel):
         }
 
         lines = [
-            f"Table: {table.name} {status}",
+            f"Table: {table_schema.name} {status}",
             "Columns:",
         ]
 
-        for column in table.columns:
-            column_result = relevant_columns_by_name.get(column.name)
+        for column_schema in table_schema.column_schemas:
+            column_result = relevant_columns_by_name.get(column_schema.name)
             observations = (
                 column_result.observations
                 if column_result
@@ -53,7 +53,7 @@ class TableProfileResult(BaseModel):
                 else "No column-level relevance reason identified."
             )
             lines.extend([
-                f"{column.name} ({column.data_type}):",
+                f"{column_schema.name} ({column_schema.data_type}):",
                 f"Observations: {observations}",
                 f"Reason: {reason}",
             ])
@@ -72,7 +72,7 @@ class DatabaseProfileResult(BaseModel):
     )
     table_profile_results: list[TableProfileResult] = Field(default_factory=list)
 
-    def to_string(self, database: Database) -> str:
+    def to_string(self, database_schema: DatabaseSchema) -> str:
         """Render database profile evidence alongside the provided schema."""
         profiles_by_table_name = {
             table_profile_result.table_name: table_profile_result
@@ -84,26 +84,26 @@ class DatabaseProfileResult(BaseModel):
             f"Table Profiles: {len(self.table_profile_results)}",
         ]
 
-        for table in database.tables:
-            table_profile_result = profiles_by_table_name.get(table.name)
+        for table_schema in database_schema.table_schemas:
+            table_profile_result = profiles_by_table_name.get(table_schema.name)
             lines.append("")
             if table_profile_result:
-                lines.append(table_profile_result.to_string(table))
+                lines.append(table_profile_result.to_string(table_schema))
             else:
-                lines.append(self._unknown_table_to_string(table))
+                lines.append(self._unknown_table_to_string(table_schema))
 
         return "\n".join(lines)
 
     @staticmethod
-    def _unknown_table_to_string(table: Table) -> str:
+    def _unknown_table_to_string(table_schema: TableSchema) -> str:
         lines = [
-            f"Table: {table.name} [MARKED UNKNOWN]",
+            f"Table: {table_schema.name} [MARKED UNKNOWN]",
             "Columns:",
         ]
 
-        for column in table.columns:
+        for column_schema in table_schema.column_schemas:
             lines.extend([
-                f"{column.name} ({column.data_type}):",
+                f"{column_schema.name} ({column_schema.data_type}):",
                 "Observations: No empirical profile evidence available for this table.",
                 "Reason: No profiling decision available.",
             ])

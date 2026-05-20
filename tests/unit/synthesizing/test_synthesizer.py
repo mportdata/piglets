@@ -5,19 +5,25 @@ from pydantic import ValidationError
 
 from piglets.synthesizing import Synthesizer
 from piglets.types import (
-    Column,
-    Database,
+    ColumnSchema,
+    DatabaseSchema,
     DatabaseProfileResult,
+    Question,
     QueryResult,
     RefinedSchemaColumn,
     RefinedSchemaTable,
+    SearchSpace,
     SemanticLinkingResult,
     SynthesisResult,
     SynthesisRunResult,
-    Table,
+    TableSchema,
     TableProfileColumnResult,
     TableProfileResult,
 )
+
+
+def _question() -> Question:
+    return Question(natural_language_question="Which orders are cancelled?")
 
 
 class FakeSynthesisLLM:
@@ -85,16 +91,16 @@ def _exploring_result(
     )
 
 
-def _database() -> Database:
-    return Database(
+def _database() -> DatabaseSchema:
+    return DatabaseSchema(
         name="example",
         database_type="DuckDB",
-        tables=[
-            Table(
+        table_schemas=[
+            TableSchema(
                 name="orders",
-                columns=[
-                    Column(name="order_id", data_type="INTEGER"),
-                    Column(name="status", data_type="VARCHAR"),
+                column_schemas=[
+                    ColumnSchema(name="order_id", data_type="INTEGER"),
+                    ColumnSchema(name="status", data_type="VARCHAR"),
                 ],
             )
         ],
@@ -134,7 +140,7 @@ def _semantic_linking_result() -> SemanticLinkingResult:
 
 def _synthesizer(fake_connector: FakeConnector) -> Synthesizer:
     return Synthesizer(
-        database=_database(),
+        search_space=SearchSpace(database_schema=_database()),
         database_connector=fake_connector,
         model_name="test-model",
         model_provider="test-provider",
@@ -143,7 +149,7 @@ def _synthesizer(fake_connector: FakeConnector) -> Synthesizer:
 
 def _synthesize(synthesizer: Synthesizer, **kwargs):
     return synthesizer.synthesize_observations(
-        natural_language_question="Which orders are cancelled?",
+        question=_question(),
         semantic_linking_result=_semantic_linking_result(),
         database_profile_result=_database_profile_result(),
         max_refine_rounds=3,
@@ -242,7 +248,7 @@ def test_synthesizer_stops_at_max_refine_rounds(monkeypatch):
     synthesizer = _synthesizer(fake_connector)
 
     synthesis_run = synthesizer.synthesize_observations(
-        natural_language_question="Which orders are cancelled?",
+        question=_question(),
         semantic_linking_result=_semantic_linking_result(),
         database_profile_result=_database_profile_result(),
         max_refine_rounds=1,
