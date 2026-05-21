@@ -1,10 +1,8 @@
 from langchain.chat_models import init_chat_model
 
 from piglets.types import (
-    AggregatePlan,
     DeletionSet,
     Hypothesis,
-    LogicalPlan,
     PreservationSet,
     Question,
     SearchSpace,
@@ -16,12 +14,6 @@ def _database_schema_from_search_space(search_space: SearchSpace):
     if search_space.database_schema is None:
         raise ValueError("search_space must contain a database_schema")
     return search_space.database_schema
-
-
-def _logical_plan_prompt_context(logical_plan: LogicalPlan | AggregatePlan = None) -> str:
-    if logical_plan is None:
-        return ""
-    return f"*** MASTER LOGICAL PLAN ***\n{logical_plan.export_as_string()}"
 
 
 def _hypothesis_prompt_context(hypothesis: Hypothesis | None = None) -> str:
@@ -36,10 +28,10 @@ class DualPathwayPruner:
         self.model_provider = model_provider
 
     def reduce(self, state: WorkflowState) -> WorkflowState:
-        pruned_search_space = self._prune(
+        pruned_search_space = self.dual_pathway_pruning(
             question=state.question,
             search_space=state.search_space,
-            prompt_context=_hypothesis_prompt_context(state.hypothesis),
+            hypothesis=state.hypothesis,
         )
         return state.model_copy(update={"search_space": pruned_search_space})
 
@@ -47,22 +39,11 @@ class DualPathwayPruner:
         self,
         question: Question,
         search_space: SearchSpace,
-        logical_plan: LogicalPlan | AggregatePlan = None,
-    ) -> PreservationSet:
-        return self._get_tables_and_fields_to_preserve(
-            question=question,
-            search_space=search_space,
-            prompt_context=_logical_plan_prompt_context(logical_plan),
-        )
-
-    def _get_tables_and_fields_to_preserve(
-        self,
-        question: Question,
-        search_space: SearchSpace,
-        prompt_context: str = "",
+        hypothesis: Hypothesis | None = None,
     ) -> PreservationSet:
         natural_language_question = question.natural_language_question
         database_schema = _database_schema_from_search_space(search_space)
+        prompt_context = _hypothesis_prompt_context(hypothesis)
 
         llm = init_chat_model(model=self.model_name, model_provider=self.model_provider)
         llm = llm.with_structured_output(PreservationSet)
@@ -126,22 +107,11 @@ class DualPathwayPruner:
         self,
         question: Question,
         search_space: SearchSpace,
-        logical_plan: LogicalPlan | AggregatePlan = None,
-    ) -> DeletionSet:
-        return self._get_tables_and_fields_to_delete(
-            question=question,
-            search_space=search_space,
-            prompt_context=_logical_plan_prompt_context(logical_plan),
-        )
-
-    def _get_tables_and_fields_to_delete(
-        self,
-        question: Question,
-        search_space: SearchSpace,
-        prompt_context: str = "",
+        hypothesis: Hypothesis | None = None,
     ) -> DeletionSet:
         natural_language_question = question.natural_language_question
         database_schema = _database_schema_from_search_space(search_space)
+        prompt_context = _hypothesis_prompt_context(hypothesis)
 
         llm = init_chat_model(model=self.model_name, model_provider=self.model_provider)
         llm = llm.with_structured_output(DeletionSet)
@@ -210,33 +180,21 @@ class DualPathwayPruner:
         self,
         question: Question,
         search_space: SearchSpace,
-        logical_plan: LogicalPlan | AggregatePlan = None,
+        hypothesis: Hypothesis | None = None,
     ) -> SearchSpace:
         """Run both pathways to produce a pruned search space."""
-        return self._prune(
-            question=question,
-            search_space=search_space,
-            prompt_context=_logical_plan_prompt_context(logical_plan),
-        )
-
-    def _prune(
-        self,
-        question: Question,
-        search_space: SearchSpace,
-        prompt_context: str = "",
-    ) -> SearchSpace:
         database_schema = _database_schema_from_search_space(search_space)
 
-        preservation_set = self._get_tables_and_fields_to_preserve(
+        preservation_set = self.get_tables_and_fields_to_preserve(
             question=question,
             search_space=search_space,
-            prompt_context=prompt_context,
+            hypothesis=hypothesis,
         )
 
-        deletion_set = self._get_tables_and_fields_to_delete(
+        deletion_set = self.get_tables_and_fields_to_delete(
             question=question,
             search_space=search_space,
-            prompt_context=prompt_context,
+            hypothesis=hypothesis,
         )
 
         database_schema_without_deletion_set = database_schema.subtract(

@@ -13,14 +13,14 @@ from piglets import (
 def test_get_tables_and_fields_to_preserve(
     model_name,
     question,
-    logical_plan,
+    hypothesis,
     duckdb_search_space,
 ):
     dual_pathway_pruner = DualPathwayPruner(model_name=model_name)
     fields_to_preserve = dual_pathway_pruner.get_tables_and_fields_to_preserve(
         question=question, 
         search_space=duckdb_search_space,
-        logical_plan=logical_plan
+        hypothesis=hypothesis
     )
 
     assert isinstance(fields_to_preserve, PreservationSet)
@@ -39,14 +39,14 @@ def test_get_tables_and_fields_to_preserve(
 def test_get_tables_and_fields_to_delete(
     model_name,
     question,
-    logical_plan,
+    hypothesis,
     duckdb_search_space,
 ):
     dual_pathway_pruner = DualPathwayPruner(model_name=model_name)
     fields_to_delete = dual_pathway_pruner.get_tables_and_fields_to_delete(
         question=question,
         search_space=duckdb_search_space,
-        logical_plan=logical_plan
+        hypothesis=hypothesis
     )
 
     assert isinstance(fields_to_delete, DeletionSet)
@@ -64,7 +64,7 @@ def test_get_tables_and_fields_to_delete(
 def test_preservation_set_to_database_schema(
     model_name,
     question,
-    logical_plan,
+    hypothesis,
     duckdb_search_space,
     duckdb_database_schema,
 ):
@@ -72,7 +72,7 @@ def test_preservation_set_to_database_schema(
     fields_to_preserve = dual_pathway_pruner.get_tables_and_fields_to_preserve(
         question=question, 
         search_space=duckdb_search_space,
-        logical_plan=logical_plan
+        hypothesis=hypothesis
     )
 
     preserved_database_schema = fields_to_preserve.to_database_schema(duckdb_database_schema)
@@ -87,7 +87,7 @@ def test_preservation_set_to_database_schema(
 def test_deletion_set_to_database_schema(
     model_name,
     question,
-    logical_plan,
+    hypothesis,
     duckdb_search_space,
     duckdb_database_schema,
 ):
@@ -95,7 +95,7 @@ def test_deletion_set_to_database_schema(
     fields_to_delete = dual_pathway_pruner.get_tables_and_fields_to_delete(
         question=question,
         search_space=duckdb_search_space,
-        logical_plan=logical_plan
+        hypothesis=hypothesis
     )
 
     deleted_database_schema = fields_to_delete.to_database_schema(duckdb_database_schema)
@@ -109,14 +109,14 @@ def test_deletion_set_to_database_schema(
 def test_dual_pathway_pruning(
     model_name,
     question,
-    logical_plan,
+    hypothesis,
     duckdb_search_space,
 ):
     dual_pathway_pruner = DualPathwayPruner(model_name=model_name)
     pruned_search_space: SearchSpace = dual_pathway_pruner.dual_pathway_pruning(
         question=question,
         search_space=duckdb_search_space,
-        logical_plan=logical_plan
+        hypothesis=hypothesis
     )
     pruned_database_schema = pruned_search_space.database_schema
 

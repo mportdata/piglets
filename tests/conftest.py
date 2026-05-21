@@ -11,6 +11,7 @@ from piglets import (
     DatabaseSchema,
     DatabaseConnector,
     DualPathwayPruner,
+    Hypothesis,
     LogicalPlan,
     LogicalPlanner,
     LogicalSteps,
@@ -157,6 +158,14 @@ def aggregate_logical_plan(
         question=question,
     )
 
+
+@pytest.fixture
+def hypothesis(
+    question: Question,
+    logical_planner: LogicalPlanner,
+) -> Hypothesis:
+    return logical_planner.generate(question=question)
+
 @pytest.fixture
 def duckdb_database_schema(duckdb_connector) -> DatabaseSchema:
     return duckdb_connector.get_database_schema()
@@ -189,12 +198,12 @@ def pruned_duckdb_search_space(
     dual_pathway_pruner,
     question,
     duckdb_search_space,
-    aggregate_logical_plan,
+    hypothesis,
 ) -> SearchSpace:
     return dual_pathway_pruner.dual_pathway_pruning(
         question=question,
         search_space=duckdb_search_space,
-        logical_plan=aggregate_logical_plan,
+        hypothesis=hypothesis,
     )
 
 

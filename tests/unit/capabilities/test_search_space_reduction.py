@@ -42,22 +42,22 @@ class FakeDualPathwayPruner(DualPathwayPruner):
         self.preservation_prompt_contexts = []
         self.deletion_prompt_contexts = []
 
-    def _get_tables_and_fields_to_preserve(
+    def get_tables_and_fields_to_preserve(
         self,
         question: Question,
         search_space: SearchSpace,
-        prompt_context: str = "",
+        hypothesis: Hypothesis | None = None,
     ) -> PreservationSet:
-        self.preservation_prompt_contexts.append(prompt_context)
+        self.preservation_prompt_contexts.append(hypothesis.content if hypothesis else "")
         return PreservationSet()
 
-    def _get_tables_and_fields_to_delete(
+    def get_tables_and_fields_to_delete(
         self,
         question: Question,
         search_space: SearchSpace,
-        prompt_context: str = "",
+        hypothesis: Hypothesis | None = None,
     ) -> DeletionSet:
-        self.deletion_prompt_contexts.append(prompt_context)
+        self.deletion_prompt_contexts.append(hypothesis.content if hypothesis else "")
         return DeletionSet(
             obviously_irrelevant_columns=[
                 DeletionColumns(table="piglets", columns=["piglet_name"])
@@ -99,9 +99,5 @@ def test_dual_pathway_pruner_reduce_returns_state_with_reduced_search_space():
     assert updated_state.search_space.database_schema.table_schemas[0].column_schemas == [
         ColumnSchema(name="piglet_id", data_type="INTEGER")
     ]
-    assert dual_pathway_pruner.preservation_prompt_contexts == [
-        "*** HYPOTHESIS ***\nUse the piglets table."
-    ]
-    assert dual_pathway_pruner.deletion_prompt_contexts == [
-        "*** HYPOTHESIS ***\nUse the piglets table."
-    ]
+    assert dual_pathway_pruner.preservation_prompt_contexts == ["Use the piglets table."]
+    assert dual_pathway_pruner.deletion_prompt_contexts == ["Use the piglets table."]
