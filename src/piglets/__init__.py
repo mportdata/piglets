@@ -10,15 +10,19 @@ from .capabilities.hypothesis_generation import (
     HypothesisGenerator as HypothesisGenerator,
     LogicalPlanner as LogicalPlanner,
 )
+from .capabilities.search_space_reduction import (
+    DualPathwayPruner as DualPathwayPruner,
+    SearchSpaceReducer as SearchSpaceReducer,
+)
 from .policies import RuleMode as RuleMode
 from .policies import SemanticRules as SemanticRules
 from .profiling import Profiler as Profiler
-from .pruning import Pruner as Pruner
 from .semantic_linking import SemanticLinker as SemanticLinker
 from .synthesizing import Synthesizer as Synthesizer
 from .workflows import (
     GenerateHypothesis as GenerateHypothesis,
     LoadSearchSpace as LoadSearchSpace,
+    ReduceSearchSpace as ReduceSearchSpace,
     WorkflowRunner as WorkflowRunner,
     WorkflowStage as WorkflowStage,
 )
@@ -72,11 +76,15 @@ __all__ = [
     # Planning
     "HypothesisGenerator",
     "LogicalPlanner",
+    # Search space reduction
+    "DualPathwayPruner",
+    "SearchSpaceReducer",
     "SemanticLinker",
     "RuleMode",
     "SemanticRules",
     "GenerateHypothesis",
     "LoadSearchSpace",
+    "ReduceSearchSpace",
     "WorkflowRunner",
     "WorkflowStage",
     # Types
@@ -110,8 +118,6 @@ __all__ = [
     "TableProfileResult",
     "TableSchema",
     "WorkflowState",
-    # Pruning
-    "Pruner",
     # Profiling
     "Profiler",
     "ProfilingQuery",

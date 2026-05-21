@@ -5,6 +5,7 @@ from piglets import (
     Hypothesis,
     LoadSearchSpace,
     Question,
+    ReduceSearchSpace,
     SearchSpace,
     TableSchema,
     WorkflowRunner,
@@ -14,6 +15,7 @@ from piglets import (
 from piglets.workflows import (
     GenerateHypothesis as WorkflowGenerateHypothesis,
     LoadSearchSpace as WorkflowLoadSearchSpace,
+    ReduceSearchSpace as WorkflowReduceSearchSpace,
     WorkflowRunner as WorkflowWorkflowRunner,
     WorkflowStage as WorkflowWorkflowStage,
 )
@@ -61,6 +63,25 @@ class FakeHypothesisGenerator:
         )
 
 
+class FakeSearchSpaceReducer:
+    def __init__(self):
+        self.states = []
+
+    def reduce(self, state: WorkflowState) -> WorkflowState:
+        self.states.append(state)
+        return state.model_copy(
+            update={
+                "search_space": SearchSpace(
+                    database_schema=DatabaseSchema(
+                        name="reduced",
+                        database_type="DuckDB",
+                        table_schemas=[],
+                    )
+                )
+            }
+        )
+
+
 class RecordingStage:
     def __init__(self, name: str, calls: list[str]):
         self.name = name
@@ -76,6 +97,7 @@ def test_workflow_imports_are_exported():
     assert WorkflowStage is WorkflowWorkflowStage
     assert LoadSearchSpace is WorkflowLoadSearchSpace
     assert GenerateHypothesis is WorkflowGenerateHypothesis
+    assert ReduceSearchSpace is WorkflowReduceSearchSpace
 
 
 def test_load_search_space_stage_adds_database_schema_to_state():
@@ -106,6 +128,26 @@ def test_generate_hypothesis_stage_adds_hypothesis_to_state():
     assert updated_state.hypothesis.content == "Count rows in the piglets table."
     assert updated_state.hypothesis.technique == "fake_generation"
     assert state.hypothesis is None
+
+
+def test_reduce_search_space_stage_updates_state_search_space():
+    reducer = FakeSearchSpaceReducer()
+    state = WorkflowState(
+        question=_question(),
+        search_space=SearchSpace(database_schema=_database_schema()),
+    )
+
+    updated_state = ReduceSearchSpace(reducer).run(state)
+
+    assert updated_state is not state
+    assert reducer.states == [state]
+    assert updated_state.question == state.question
+    assert updated_state.search_space.database_schema == DatabaseSchema(
+        name="reduced",
+        database_type="DuckDB",
+        table_schemas=[],
+    )
+    assert state.search_space.database_schema == _database_schema()
 
 
 def test_workflow_runner_runs_stages_in_order():
@@ -142,4 +184,31 @@ def test_workflow_runner_loads_search_space_and_generates_hypothesis():
     assert state.search_space.database_schema == _database_schema()
     assert state.hypothesis is not None
     assert state.hypothesis.question == question
+    assert state.hypothesis.technique == "fake_generation"
+
+
+def test_workflow_runner_loads_generates_hypothesis_and_reduces_search_space():
+    connector = FakeDatabaseConnector()
+    generator = FakeHypothesisGenerator()
+    reducer = FakeSearchSpaceReducer()
+    question = _question()
+    runner = WorkflowRunner(
+        stages=[
+            LoadSearchSpace(connector),
+            GenerateHypothesis(generator),
+            ReduceSearchSpace(reducer),
+        ]
+    )
+
+    state = runner.run(question)
+
+    assert reducer.states[0].search_space.database_schema == _database_schema()
+    assert reducer.states[0].hypothesis is not None
+    assert state.question == question
+    assert state.search_space.database_schema == DatabaseSchema(
+        name="reduced",
+        database_type="DuckDB",
+        table_schemas=[],
+    )
+    assert state.hypothesis is not None
     assert state.hypothesis.technique == "fake_generation"

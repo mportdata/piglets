@@ -10,10 +10,10 @@ from piglets import (
     AggregatePlan,
     DatabaseSchema,
     DatabaseConnector,
+    DualPathwayPruner,
     LogicalPlan,
     LogicalPlanner,
     LogicalSteps,
-    Pruner,
     Question,
     SearchSpace,
     SemanticLinker,
@@ -181,17 +181,17 @@ def semantic_linker(model_name) -> SemanticLinker:
     return SemanticLinker(model_name=model_name)
 
 @pytest.fixture
-def pruner(model_name) -> Pruner:
-    return Pruner(model_name=model_name)
+def dual_pathway_pruner(model_name) -> DualPathwayPruner:
+    return DualPathwayPruner(model_name=model_name)
 
 @pytest.fixture
 def pruned_duckdb_search_space(
-    pruner,
+    dual_pathway_pruner,
     question,
     duckdb_search_space,
     aggregate_logical_plan,
 ) -> SearchSpace:
-    return pruner.dual_pathway_pruning(
+    return dual_pathway_pruner.dual_pathway_pruning(
         question=question,
         search_space=duckdb_search_space,
         logical_plan=aggregate_logical_plan,

@@ -2,9 +2,9 @@ from piglets import (
     DatabaseSchema, 
     DeletionColumns,
     DeletionSet,
+    DualPathwayPruner,
     PreservationColumns, 
     PreservationSet,
-    Pruner,
     SearchSpace,
     TableSchema
 )
@@ -16,8 +16,8 @@ def test_get_tables_and_fields_to_preserve(
     logical_plan,
     duckdb_search_space,
 ):
-    pruner = Pruner(model_name=model_name)
-    fields_to_preserve = pruner.get_tables_and_fields_to_preserve(
+    dual_pathway_pruner = DualPathwayPruner(model_name=model_name)
+    fields_to_preserve = dual_pathway_pruner.get_tables_and_fields_to_preserve(
         question=question, 
         search_space=duckdb_search_space,
         logical_plan=logical_plan
@@ -42,8 +42,8 @@ def test_get_tables_and_fields_to_delete(
     logical_plan,
     duckdb_search_space,
 ):
-    pruner = Pruner(model_name=model_name)
-    fields_to_delete = pruner.get_tables_and_fields_to_delete(
+    dual_pathway_pruner = DualPathwayPruner(model_name=model_name)
+    fields_to_delete = dual_pathway_pruner.get_tables_and_fields_to_delete(
         question=question,
         search_space=duckdb_search_space,
         logical_plan=logical_plan
@@ -68,8 +68,8 @@ def test_preservation_set_to_database_schema(
     duckdb_search_space,
     duckdb_database_schema,
 ):
-    pruner = Pruner(model_name=model_name)
-    fields_to_preserve = pruner.get_tables_and_fields_to_preserve(
+    dual_pathway_pruner = DualPathwayPruner(model_name=model_name)
+    fields_to_preserve = dual_pathway_pruner.get_tables_and_fields_to_preserve(
         question=question, 
         search_space=duckdb_search_space,
         logical_plan=logical_plan
@@ -91,8 +91,8 @@ def test_deletion_set_to_database_schema(
     duckdb_search_space,
     duckdb_database_schema,
 ):
-    pruner = Pruner(model_name=model_name)
-    fields_to_delete = pruner.get_tables_and_fields_to_delete(
+    dual_pathway_pruner = DualPathwayPruner(model_name=model_name)
+    fields_to_delete = dual_pathway_pruner.get_tables_and_fields_to_delete(
         question=question,
         search_space=duckdb_search_space,
         logical_plan=logical_plan
@@ -112,8 +112,8 @@ def test_dual_pathway_pruning(
     logical_plan,
     duckdb_search_space,
 ):
-    pruner = Pruner(model_name=model_name)
-    pruned_search_space: SearchSpace = pruner.dual_pathway_pruning(
+    dual_pathway_pruner = DualPathwayPruner(model_name=model_name)
+    pruned_search_space: SearchSpace = dual_pathway_pruner.dual_pathway_pruning(
         question=question,
         search_space=duckdb_search_space,
         logical_plan=logical_plan
