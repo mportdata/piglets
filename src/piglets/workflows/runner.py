@@ -1,4 +1,4 @@
-from piglets.types import Question, WorkflowContext
+from piglets.types import Question, WorkflowState
 
 from .protocol import WorkflowStage
 
@@ -9,8 +9,8 @@ class WorkflowRunner:
     def __init__(self, stages: list[WorkflowStage]):
         self.stages = stages
 
-    def run(self, question: Question) -> WorkflowContext:
-        context = WorkflowContext(question=question)
+    def run(self, question: Question) -> WorkflowState:
+        state = WorkflowState(question=question)
         for stage in self.stages:
-            context = stage.run(context)
-        return context
+            state = stage.run(state)
+        return state

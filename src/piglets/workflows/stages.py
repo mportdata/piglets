@@ -1,6 +1,6 @@
 from piglets.capabilities.hypothesis_generation import HypothesisGenerator
 from piglets.database import DatabaseConnector
-from piglets.types import WorkflowContext
+from piglets.types import WorkflowState
 
 
 class LoadSearchSpace:
@@ -9,11 +9,11 @@ class LoadSearchSpace:
     def __init__(self, database_connector: DatabaseConnector):
         self.database_connector = database_connector
 
-    def run(self, context: WorkflowContext) -> WorkflowContext:
-        return context.model_copy(
+    def run(self, state: WorkflowState) -> WorkflowState:
+        return state.model_copy(
             update={
                 "search_space": self.database_connector.add_to_search_space(
-                    context.search_space
+                    state.search_space
                 )
             }
         )
@@ -25,9 +25,9 @@ class GenerateHypothesis:
     def __init__(self, hypothesis_generator: HypothesisGenerator):
         self.hypothesis_generator = hypothesis_generator
 
-    def run(self, context: WorkflowContext) -> WorkflowContext:
-        return context.model_copy(
+    def run(self, state: WorkflowState) -> WorkflowState:
+        return state.model_copy(
             update={
-                "hypothesis": self.hypothesis_generator.generate(context.question)
+                "hypothesis": self.hypothesis_generator.generate(state.question)
             }
         )

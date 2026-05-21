@@ -34,7 +34,7 @@ class Hypothesis(BaseModel):
     )
 
 
-class WorkflowContext(BaseModel):
+class WorkflowState(BaseModel):
     """The artifact bundle passed between workflow stages."""
 
     question: Question = Field(description="The question being answered.")
