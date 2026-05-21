@@ -1,12 +1,12 @@
 from langchain.chat_models import init_chat_model
 
 from piglets.types import (
-    AggregatePlan,
     DeletionSet,
-    LogicalPlan,
+    Hypothesis,
     PreservationSet,
     Question,
     SearchSpace,
+    WorkflowState,
 )
 
 
@@ -16,19 +16,34 @@ def _database_schema_from_search_space(search_space: SearchSpace):
     return search_space.database_schema
 
 
-class Pruner():
+def _hypothesis_prompt_context(hypothesis: Hypothesis | None = None) -> str:
+    if hypothesis is None:
+        return ""
+    return f"*** HYPOTHESIS ***\n{hypothesis.content}"
+
+
+class DualPathwayPruner:
     def __init__(self, model_name: str, model_provider: str = None):
         self.model_name = model_name
         self.model_provider = model_provider
+
+    def reduce(self, state: WorkflowState) -> WorkflowState:
+        pruned_search_space = self.dual_pathway_pruning(
+            question=state.question,
+            search_space=state.search_space,
+            hypothesis=state.hypothesis,
+        )
+        return state.model_copy(update={"search_space": pruned_search_space})
 
     def get_tables_and_fields_to_preserve(
         self,
         question: Question,
         search_space: SearchSpace,
-        logical_plan: LogicalPlan | AggregatePlan = None,
+        hypothesis: Hypothesis | None = None,
     ) -> PreservationSet:
         natural_language_question = question.natural_language_question
         database_schema = _database_schema_from_search_space(search_space)
+        prompt_context = _hypothesis_prompt_context(hypothesis)
 
         llm = init_chat_model(model=self.model_name, model_provider=self.model_provider)
         llm = llm.with_structured_output(PreservationSet)
@@ -42,7 +57,7 @@ class Pruner():
             the plan.
             *** USER QUESTION ***
             {natural_language_question}
-            {f"*** MASTER LOGICAL PLAN ***\n{logical_plan.export_as_string()}" if logical_plan else ""}
+            {prompt_context}
             *** FULL DATABASE SCHEMA ***
             {database_schema.export_as_string()}
             *** STRICT GUIDELINES ***
@@ -92,10 +107,11 @@ class Pruner():
         self,
         question: Question,
         search_space: SearchSpace,
-        logical_plan: LogicalPlan | AggregatePlan = None,
+        hypothesis: Hypothesis | None = None,
     ) -> DeletionSet:
         natural_language_question = question.natural_language_question
         database_schema = _database_schema_from_search_space(search_space)
+        prompt_context = _hypothesis_prompt_context(hypothesis)
 
         llm = init_chat_model(model=self.model_name, model_provider=self.model_provider)
         llm = llm.with_structured_output(DeletionSet)
@@ -107,7 +123,7 @@ class Pruner():
             Your task: **Negative Pruning**. Identify database tables or columns that are **100% IRRELEVANT** to the plan.
             *** USER QUESTION ***
             {natural_language_question}
-            {f"*** MASTER LOGICAL PLAN ***\n{logical_plan.export_as_string()}" if logical_plan else ""}
+            {prompt_context}
             *** FULL DATABASE SCHEMA ***
             {database_schema.export_as_string()}
             *** STRICT GUIDELINES ***
@@ -159,26 +175,26 @@ class Pruner():
         deletion_set = llm.invoke(DELETION_SET_PROMPT)
 
         return deletion_set
-    
+
     def dual_pathway_pruning(
         self,
         question: Question,
         search_space: SearchSpace,
-        logical_plan: LogicalPlan | AggregatePlan = None,
+        hypothesis: Hypothesis | None = None,
     ) -> SearchSpace:
-        """Run both the preservation and deletion pathways to prune the database schema, then combine the results to produce a final pruned database."""
+        """Run both pathways to produce a pruned search space."""
         database_schema = _database_schema_from_search_space(search_space)
-        
+
         preservation_set = self.get_tables_and_fields_to_preserve(
             question=question,
             search_space=search_space,
-            logical_plan=logical_plan
+            hypothesis=hypothesis,
         )
-        
+
         deletion_set = self.get_tables_and_fields_to_delete(
             question=question,
             search_space=search_space,
-            logical_plan=logical_plan
+            hypothesis=hypothesis,
         )
 
         database_schema_without_deletion_set = database_schema.subtract(
@@ -187,5 +203,5 @@ class Pruner():
         final_pruned_database_schema = database_schema_without_deletion_set.union(
             preservation_set.to_database_schema(database_schema)
         )
-        
+
         return SearchSpace(database_schema=final_pruned_database_schema)

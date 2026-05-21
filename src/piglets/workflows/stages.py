@@ -1,4 +1,5 @@
 from piglets.capabilities.hypothesis_generation import HypothesisGenerator
+from piglets.capabilities.search_space_reduction import SearchSpaceReducer
 from piglets.database import DatabaseConnector
 from piglets.types import WorkflowState
 
@@ -31,3 +32,13 @@ class GenerateHypothesis:
                 "hypothesis": self.hypothesis_generator.generate(state.question)
             }
         )
+
+
+class ReduceSearchSpace:
+    """Reduce the workflow search space."""
+
+    def __init__(self, search_space_reducer: SearchSpaceReducer):
+        self.search_space_reducer = search_space_reducer
+
+    def run(self, state: WorkflowState) -> WorkflowState:
+        return self.search_space_reducer.reduce(state)
