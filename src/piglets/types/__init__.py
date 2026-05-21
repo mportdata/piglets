@@ -8,7 +8,7 @@ from .artifacts import (
     Hypothesis as Hypothesis,
     Question as Question,
     SearchSpace as SearchSpace,
-    WorkflowContext as WorkflowContext,
+    WorkflowState as WorkflowState,
 )
 from .linking import (
     SemanticLinkingResult as SemanticLinkingResult,
@@ -56,7 +56,7 @@ __all__ = [
     "Hypothesis",
     "Question",
     "SearchSpace",
-    "WorkflowContext",
+    "WorkflowState",
     "SemanticLinkingResult",
     # database types
     "ColumnSchema",

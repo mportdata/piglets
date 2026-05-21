@@ -1,11 +1,11 @@
 from typing import Protocol
 
-from piglets.types import WorkflowContext
+from piglets.types import WorkflowState
 
 
 class WorkflowStage(Protocol):
-    """A workflow stage that transforms a workflow context."""
+    """A workflow stage that transforms workflow state."""
 
-    def run(self, context: WorkflowContext) -> WorkflowContext:
-        """Run the stage and return the updated workflow context."""
+    def run(self, state: WorkflowState) -> WorkflowState:
+        """Run the stage and return the updated workflow state."""
         ...

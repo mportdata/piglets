@@ -7,8 +7,8 @@ from piglets import (
     Question,
     SearchSpace,
     TableSchema,
-    WorkflowContext,
     WorkflowRunner,
+    WorkflowState,
     WorkflowStage,
 )
 from piglets.workflows import (
@@ -66,9 +66,9 @@ class RecordingStage:
         self.name = name
         self.calls = calls
 
-    def run(self, context: WorkflowContext) -> WorkflowContext:
+    def run(self, state: WorkflowState) -> WorkflowState:
         self.calls.append(self.name)
-        return context
+        return state
 
 
 def test_workflow_imports_are_exported():
@@ -78,34 +78,34 @@ def test_workflow_imports_are_exported():
     assert GenerateHypothesis is WorkflowGenerateHypothesis
 
 
-def test_load_search_space_stage_adds_database_schema_to_context():
+def test_load_search_space_stage_adds_database_schema_to_state():
     connector = FakeDatabaseConnector()
-    context = WorkflowContext(question=_question())
+    state = WorkflowState(question=_question())
 
-    updated_context = LoadSearchSpace(connector).run(context)
+    updated_state = LoadSearchSpace(connector).run(state)
 
-    assert updated_context is not context
-    assert connector.search_spaces == [context.search_space]
-    assert updated_context.question == context.question
-    assert updated_context.search_space.database_schema == _database_schema()
-    assert context.search_space.database_schema is None
+    assert updated_state is not state
+    assert connector.search_spaces == [state.search_space]
+    assert updated_state.question == state.question
+    assert updated_state.search_space.database_schema == _database_schema()
+    assert state.search_space.database_schema is None
 
 
-def test_generate_hypothesis_stage_adds_hypothesis_to_context():
+def test_generate_hypothesis_stage_adds_hypothesis_to_state():
     generator = FakeHypothesisGenerator()
     question = _question()
-    context = WorkflowContext(question=question)
+    state = WorkflowState(question=question)
 
-    updated_context = GenerateHypothesis(generator).run(context)
+    updated_state = GenerateHypothesis(generator).run(state)
 
-    assert updated_context is not context
+    assert updated_state is not state
     assert generator.questions == [question]
-    assert updated_context.question == question
-    assert updated_context.hypothesis is not None
-    assert updated_context.hypothesis.question == question
-    assert updated_context.hypothesis.content == "Count rows in the piglets table."
-    assert updated_context.hypothesis.technique == "fake_generation"
-    assert context.hypothesis is None
+    assert updated_state.question == question
+    assert updated_state.hypothesis is not None
+    assert updated_state.hypothesis.question == question
+    assert updated_state.hypothesis.content == "Count rows in the piglets table."
+    assert updated_state.hypothesis.technique == "fake_generation"
+    assert state.hypothesis is None
 
 
 def test_workflow_runner_runs_stages_in_order():
@@ -118,11 +118,11 @@ def test_workflow_runner_runs_stages_in_order():
         ]
     )
 
-    context = runner.run(question)
+    state = runner.run(question)
 
     assert calls == ["first", "second"]
-    assert isinstance(context, WorkflowContext)
-    assert context.question == question
+    assert isinstance(state, WorkflowState)
+    assert state.question == question
 
 
 def test_workflow_runner_loads_search_space_and_generates_hypothesis():
@@ -136,10 +136,10 @@ def test_workflow_runner_loads_search_space_and_generates_hypothesis():
         ]
     )
 
-    context = runner.run(question)
+    state = runner.run(question)
 
-    assert context.question == question
-    assert context.search_space.database_schema == _database_schema()
-    assert context.hypothesis is not None
-    assert context.hypothesis.question == question
-    assert context.hypothesis.technique == "fake_generation"
+    assert state.question == question
+    assert state.search_space.database_schema == _database_schema()
+    assert state.hypothesis is not None
+    assert state.hypothesis.question == question
+    assert state.hypothesis.technique == "fake_generation"

@@ -54,7 +54,7 @@ from .types import (
     TableProfileColumnResult as TableProfileColumnResult,
     TableProfileResult as TableProfileResult,
     TableSchema as TableSchema,
-    WorkflowContext as WorkflowContext,
+    WorkflowState as WorkflowState,
 )
 
 __all__ = [
@@ -109,7 +109,7 @@ __all__ = [
     "TableProfileColumnResult",
     "TableProfileResult",
     "TableSchema",
-    "WorkflowContext",
+    "WorkflowState",
     # Pruning
     "Pruner",
     # Profiling
