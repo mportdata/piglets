@@ -28,8 +28,8 @@ def _database_schema_from_search_space(search_space: SearchSpace):
 class GlobalSynthesizer:
     def __init__(
             self,
-            database_connector: DatabaseConnector,
             model_name: str,
+            database_connector: DatabaseConnector,
             model_provider: str | None = None,
             search_space: SearchSpace | None = None,
     ):
