@@ -3,7 +3,7 @@ import logging
 import pytest
 from pydantic import ValidationError
 
-from piglets.synthesizing import Synthesizer
+from piglets.capabilities.search_space_finalization import GlobalSynthesizer
 from piglets.types import (
     ColumnSchema,
     DatabaseSchema,
@@ -138,8 +138,8 @@ def _semantic_linking_result() -> SemanticLinkingResult:
     )
 
 
-def _synthesizer(fake_connector: FakeConnector) -> Synthesizer:
-    return Synthesizer(
+def _synthesizer(fake_connector: FakeConnector) -> GlobalSynthesizer:
+    return GlobalSynthesizer(
         search_space=SearchSpace(database_schema=_database()),
         database_connector=fake_connector,
         model_name="test-model",
@@ -147,7 +147,7 @@ def _synthesizer(fake_connector: FakeConnector) -> Synthesizer:
     )
 
 
-def _synthesize(synthesizer: Synthesizer, **kwargs):
+def _synthesize(synthesizer: GlobalSynthesizer, **kwargs):
     return synthesizer.synthesize_observations(
         question=_question(),
         semantic_linking_result=_semantic_linking_result(),
@@ -167,7 +167,7 @@ def test_synthesizer_returns_history_by_default_for_first_round_confirm(monkeypa
         return fake_llm
 
     monkeypatch.setattr(
-        "piglets.synthesizing.synthesizer.init_chat_model",
+        "piglets.capabilities.search_space_finalization.techniques.global_synthesis.global_synthesizer.init_chat_model",
         fake_init_chat_model,
     )
 
@@ -197,7 +197,7 @@ def test_synthesizer_explores_and_feeds_results_into_next_prompt(monkeypatch):
     ])
     fake_connector = FakeConnector()
     monkeypatch.setattr(
-        "piglets.synthesizing.synthesizer.init_chat_model",
+        "piglets.capabilities.search_space_finalization.techniques.global_synthesis.global_synthesizer.init_chat_model",
         lambda model, model_provider=None: fake_llm,
     )
 
@@ -225,7 +225,7 @@ def test_synthesizer_can_return_final_result_without_history(monkeypatch):
     fake_llm = FakeSynthesisLLM([_confirmed_result()])
     fake_connector = FakeConnector()
     monkeypatch.setattr(
-        "piglets.synthesizing.synthesizer.init_chat_model",
+        "piglets.capabilities.search_space_finalization.techniques.global_synthesis.global_synthesizer.init_chat_model",
         lambda model, model_provider=None: fake_llm,
     )
 
@@ -242,7 +242,7 @@ def test_synthesizer_stops_at_max_refine_rounds(monkeypatch):
     fake_llm = FakeSynthesisLLM([_exploring_result()])
     fake_connector = FakeConnector()
     monkeypatch.setattr(
-        "piglets.synthesizing.synthesizer.init_chat_model",
+        "piglets.capabilities.search_space_finalization.techniques.global_synthesis.global_synthesizer.init_chat_model",
         lambda model, model_provider=None: fake_llm,
     )
     synthesizer = _synthesizer(fake_connector)
@@ -263,11 +263,11 @@ def test_synthesizer_stops_at_max_refine_rounds(monkeypatch):
 
 
 def test_synthesizer_stops_when_exploring_without_queries(monkeypatch, caplog):
-    caplog.set_level(logging.WARNING, logger="piglets.synthesizing.synthesizer")
+    caplog.set_level(logging.WARNING, logger="piglets.capabilities.search_space_finalization.techniques.global_synthesis.global_synthesizer")
     fake_llm = FakeSynthesisLLM([_exploring_result(exploration_queries=[])])
     fake_connector = FakeConnector()
     monkeypatch.setattr(
-        "piglets.synthesizing.synthesizer.init_chat_model",
+        "piglets.capabilities.search_space_finalization.techniques.global_synthesis.global_synthesizer.init_chat_model",
         lambda model, model_provider=None: fake_llm,
     )
 

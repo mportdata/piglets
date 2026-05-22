@@ -1,7 +1,11 @@
+import pytest
+
 from piglets import (
     ColumnSchema,
     DatabaseSchema,
-    EnrichSearchSpace,
+    EnterUserQuestion,
+    FinalizeSearchSpace,
+    GroundSearchSpace,
     GenerateHypothesis,
     Hypothesis,
     LoadSearchSpace,
@@ -9,15 +13,19 @@ from piglets import (
     ReduceSearchSpace,
     SearchSpace,
     TableSchema,
+    VerifySearchSpace,
     WorkflowRunner,
     WorkflowState,
     WorkflowStage,
 )
 from piglets.workflows import (
-    EnrichSearchSpace as WorkflowEnrichSearchSpace,
+    EnterUserQuestion as WorkflowEnterUserQuestion,
+    FinalizeSearchSpace as WorkflowFinalizeSearchSpace,
+    GroundSearchSpace as WorkflowGroundSearchSpace,
     GenerateHypothesis as WorkflowGenerateHypothesis,
     LoadSearchSpace as WorkflowLoadSearchSpace,
     ReduceSearchSpace as WorkflowReduceSearchSpace,
+    VerifySearchSpace as WorkflowVerifySearchSpace,
     WorkflowRunner as WorkflowWorkflowRunner,
     WorkflowStage as WorkflowWorkflowStage,
 )
@@ -65,11 +73,11 @@ class FakeHypothesisGenerator:
         )
 
 
-class FakeSearchSpaceEnricher:
+class FakeSearchSpaceGrounder:
     def __init__(self):
         self.states = []
 
-    def enrich(self, state: WorkflowState) -> WorkflowState:
+    def ground(self, state: WorkflowState) -> WorkflowState:
         self.states.append(state)
         return state.model_copy(
             update={
@@ -103,6 +111,44 @@ class FakeSearchSpaceReducer:
         )
 
 
+class FakeSearchSpaceVerifier:
+    def __init__(self):
+        self.states = []
+
+    def verify(self, state: WorkflowState) -> WorkflowState:
+        self.states.append(state)
+        return state.model_copy(
+            update={
+                "search_space": SearchSpace(
+                    database_schema=DatabaseSchema(
+                        name="verified",
+                        database_type="DuckDB",
+                        table_schemas=[],
+                    )
+                )
+            }
+        )
+
+
+class FakeSearchSpaceFinalizer:
+    def __init__(self):
+        self.states = []
+
+    def finalize(self, state: WorkflowState) -> WorkflowState:
+        self.states.append(state)
+        return state.model_copy(
+            update={
+                "search_space": SearchSpace(
+                    database_schema=DatabaseSchema(
+                        name="finalized",
+                        database_type="DuckDB",
+                        table_schemas=[],
+                    )
+                )
+            }
+        )
+
+
 class RecordingStage:
     def __init__(self, name: str, calls: list[str]):
         self.name = name
@@ -116,10 +162,53 @@ class RecordingStage:
 def test_workflow_imports_are_exported():
     assert WorkflowRunner is WorkflowWorkflowRunner
     assert WorkflowStage is WorkflowWorkflowStage
+    assert EnterUserQuestion is WorkflowEnterUserQuestion
     assert LoadSearchSpace is WorkflowLoadSearchSpace
     assert GenerateHypothesis is WorkflowGenerateHypothesis
-    assert EnrichSearchSpace is WorkflowEnrichSearchSpace
+    assert GroundSearchSpace is WorkflowGroundSearchSpace
     assert ReduceSearchSpace is WorkflowReduceSearchSpace
+    assert VerifySearchSpace is WorkflowVerifySearchSpace
+    assert FinalizeSearchSpace is WorkflowFinalizeSearchSpace
+
+
+def test_enter_user_question_stage_adds_question_to_state():
+    question = _question()
+    state = WorkflowState(search_space=SearchSpace(database_schema=_database_schema()))
+
+    updated_state = EnterUserQuestion(question).run(state)
+
+    assert updated_state is not state
+    assert updated_state.question == question
+    assert updated_state.search_space == state.search_space
+    assert state.question is None
+
+
+def test_enter_user_question_stage_accepts_string():
+    state = WorkflowState()
+
+    updated_state = EnterUserQuestion("count piglets").run(state)
+
+    assert updated_state.question == _question()
+    assert state.question is None
+
+
+def test_enter_user_question_stage_preserves_existing_artifacts():
+    question = _question()
+    hypothesis = Hypothesis(
+        question=question,
+        content="Count rows in the piglets table.",
+        technique="fake_generation",
+    )
+    state = WorkflowState(
+        search_space=SearchSpace(database_schema=_database_schema()),
+        hypothesis=hypothesis,
+    )
+
+    updated_state = EnterUserQuestion(question).run(state)
+
+    assert updated_state.question == question
+    assert updated_state.search_space == state.search_space
+    assert updated_state.hypothesis == hypothesis
 
 
 def test_load_search_space_stage_adds_database_schema_to_state():
@@ -152,17 +241,27 @@ def test_generate_hypothesis_stage_adds_hypothesis_to_state():
     assert state.hypothesis is None
 
 
-def test_enrich_search_space_stage_updates_state_search_space():
-    enricher = FakeSearchSpaceEnricher()
+def test_generate_hypothesis_stage_requires_question():
+    generator = FakeHypothesisGenerator()
+    state = WorkflowState()
+
+    with pytest.raises(ValueError, match="WorkflowState must contain a question"):
+        GenerateHypothesis(generator).run(state)
+
+    assert generator.questions == []
+
+
+def test_ground_search_space_stage_updates_state_search_space():
+    grounder = FakeSearchSpaceGrounder()
     state = WorkflowState(
         question=_question(),
         search_space=SearchSpace(database_schema=_database_schema()),
     )
 
-    updated_state = EnrichSearchSpace(enricher).run(state)
+    updated_state = GroundSearchSpace(grounder).run(state)
 
     assert updated_state is not state
-    assert enricher.states == [state]
+    assert grounder.states == [state]
     assert updated_state.question == state.question
     assert updated_state.search_space.database_schema == DatabaseSchema(
         name="enriched",
@@ -192,9 +291,48 @@ def test_reduce_search_space_stage_updates_state_search_space():
     assert state.search_space.database_schema == _database_schema()
 
 
+def test_verify_search_space_stage_updates_state_search_space():
+    verifier = FakeSearchSpaceVerifier()
+    state = WorkflowState(
+        question=_question(),
+        search_space=SearchSpace(database_schema=_database_schema()),
+    )
+
+    updated_state = VerifySearchSpace(verifier).run(state)
+
+    assert updated_state is not state
+    assert verifier.states == [state]
+    assert updated_state.question == state.question
+    assert updated_state.search_space.database_schema == DatabaseSchema(
+        name="verified",
+        database_type="DuckDB",
+        table_schemas=[],
+    )
+    assert state.search_space.database_schema == _database_schema()
+
+
+def test_finalize_search_space_stage_updates_state_search_space():
+    finalizer = FakeSearchSpaceFinalizer()
+    state = WorkflowState(
+        question=_question(),
+        search_space=SearchSpace(database_schema=_database_schema()),
+    )
+
+    updated_state = FinalizeSearchSpace(finalizer).run(state)
+
+    assert updated_state is not state
+    assert finalizer.states == [state]
+    assert updated_state.question == state.question
+    assert updated_state.search_space.database_schema == DatabaseSchema(
+        name="finalized",
+        database_type="DuckDB",
+        table_schemas=[],
+    )
+    assert state.search_space.database_schema == _database_schema()
+
+
 def test_workflow_runner_runs_stages_in_order():
     calls = []
-    question = _question()
     runner = WorkflowRunner(
         stages=[
             RecordingStage("first", calls),
@@ -202,10 +340,23 @@ def test_workflow_runner_runs_stages_in_order():
         ]
     )
 
-    state = runner.run(question)
+    state = runner.run()
 
     assert calls == ["first", "second"]
     assert isinstance(state, WorkflowState)
+    assert state.question is None
+
+
+def test_workflow_runner_can_start_from_existing_state():
+    calls = []
+    question = _question()
+    initial_state = WorkflowState(question=question)
+    runner = WorkflowRunner(stages=[RecordingStage("first", calls)])
+
+    state = runner.run(initial_state)
+
+    assert calls == ["first"]
+    assert state == initial_state
     assert state.question == question
 
 
@@ -215,12 +366,13 @@ def test_workflow_runner_loads_search_space_and_generates_hypothesis():
     question = _question()
     runner = WorkflowRunner(
         stages=[
+            EnterUserQuestion(question),
             LoadSearchSpace(connector),
             GenerateHypothesis(generator),
         ]
     )
 
-    state = runner.run(question)
+    state = runner.run()
 
     assert state.question == question
     assert state.search_space.database_schema == _database_schema()
@@ -236,13 +388,14 @@ def test_workflow_runner_loads_generates_hypothesis_and_reduces_search_space():
     question = _question()
     runner = WorkflowRunner(
         stages=[
+            EnterUserQuestion(question),
             LoadSearchSpace(connector),
             GenerateHypothesis(generator),
             ReduceSearchSpace(reducer),
         ]
     )
 
-    state = runner.run(question)
+    state = runner.run()
 
     assert reducer.states[0].search_space.database_schema == _database_schema()
     assert reducer.states[0].hypothesis is not None

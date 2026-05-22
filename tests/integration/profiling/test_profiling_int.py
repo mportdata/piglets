@@ -4,7 +4,7 @@ import re
 from piglets import (
     DatabaseSchema,
     DatabaseProfileResult,
-    Profiler,
+    ParallelDataProfiler,
     ProfilingQueries,
     ProfilingQuery,
     QueryResult,
@@ -15,8 +15,8 @@ from piglets import (
 )
 
 @pytest.fixture
-def profiler(model_name, pruned_duckdb_search_space) -> Profiler:
-    return Profiler(model_name=model_name, search_space=pruned_duckdb_search_space)
+def profiler(model_name, pruned_duckdb_search_space) -> ParallelDataProfiler:
+    return ParallelDataProfiler(model_name=model_name, search_space=pruned_duckdb_search_space)
 
 @pytest.fixture
 def table(pruned_duckdb_search_space) -> TableSchema:

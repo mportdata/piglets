@@ -4,6 +4,8 @@ from pydantic import BaseModel, Field
 
 from .database import DatabaseSchema
 from .linking import SemanticLinkingResult
+from .profiling import DatabaseProfileResult
+from .synthesis import SynthesisRunResult
 
 
 class Question(BaseModel):
@@ -25,6 +27,14 @@ class SearchSpace(BaseModel):
         default=None,
         description="Raw semantic linking output used to enrich the search space.",
     )
+    database_profile_result: DatabaseProfileResult | None = Field(
+        default=None,
+        description="Empirical profile evidence for the current search space.",
+    )
+    synthesis_run_result: SynthesisRunResult | None = Field(
+        default=None,
+        description="Global synthesis result used to finalize the search space.",
+    )
 
 
 class Hypothesis(BaseModel):
@@ -42,7 +52,10 @@ class Hypothesis(BaseModel):
 class WorkflowState(BaseModel):
     """The artifact bundle passed between workflow stages."""
 
-    question: Question = Field(description="The question being answered.")
+    question: Question | None = Field(
+        default=None,
+        description="The question being answered.",
+    )
     search_space: SearchSpace = Field(
         default_factory=SearchSpace,
         description="The current workflow search space.",

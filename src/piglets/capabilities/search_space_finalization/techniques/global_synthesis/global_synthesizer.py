@@ -12,6 +12,7 @@ from piglets.types import (
     SynthesisRound,
     SynthesisResult,
     SynthesisRunResult,
+    WorkflowState,
 )
 
 
@@ -24,22 +25,55 @@ def _database_schema_from_search_space(search_space: SearchSpace):
     return search_space.database_schema
 
 
-class Synthesizer():
+class GlobalSynthesizer:
     def __init__(
             self,
-            search_space: SearchSpace,
             database_connector: DatabaseConnector,
             model_name: str,
-            model_provider: str | None,
+            model_provider: str | None = None,
+            search_space: SearchSpace | None = None,
     ):
-        self.search_space: SearchSpace = search_space
         self.database_connector: DatabaseConnector = database_connector
         self.model_name: str = model_name
         self.model_provider = model_provider
+        self.search_space: SearchSpace | None = search_space
 
     @property
     def database_schema(self):
+        if self.search_space is None:
+            raise ValueError("search_space must be set before synthesis")
         return _database_schema_from_search_space(self.search_space)
+
+    def finalize(self, state: WorkflowState) -> WorkflowState:
+        """Finalize the current search space from profile and synthesis evidence."""
+        semantic_linking_result = state.search_space.semantic_linking_result
+        if semantic_linking_result is None:
+            raise ValueError("search_space must contain a semantic_linking_result")
+
+        database_profile_result = state.search_space.database_profile_result
+        if database_profile_result is None:
+            raise ValueError("search_space must contain a database_profile_result")
+
+        self.search_space = state.search_space
+        synthesis_run_result = self.synthesize_observations(
+            question=state.question,
+            semantic_linking_result=semantic_linking_result,
+            database_profile_result=database_profile_result,
+            return_history=True,
+        )
+        if isinstance(synthesis_run_result, SynthesisResult):
+            synthesis_result = synthesis_run_result
+        else:
+            synthesis_result = synthesis_run_result.final_result
+
+        update = {"synthesis_run_result": synthesis_run_result}
+        if synthesis_result.status == "[CONFIRM]":
+            update["database_schema"] = synthesis_result.to_database_schema(
+                self.database_schema
+            )
+
+        finalized_search_space = state.search_space.model_copy(update=update)
+        return state.model_copy(update={"search_space": finalized_search_space})
 
     def _build_synthesis_prompt(
         self,
