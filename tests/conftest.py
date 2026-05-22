@@ -217,10 +217,10 @@ def semantic_linking_result(
     semantic_linker,
     question,
     pruned_duckdb_search_space,
-    logical_plan,
+    hypothesis,
 ) -> SemanticLinkingResult:
     return semantic_linker.link(
         question=question,
         search_space=pruned_duckdb_search_space,
-        logical_plan=logical_plan,
+        hypothesis=hypothesis,
     )

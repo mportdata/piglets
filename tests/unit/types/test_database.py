@@ -1,7 +1,13 @@
 import pytest
 from pydantic import ValidationError
 
-from piglets.types import ColumnSchema, DatabaseSchema, TableSchema
+from piglets.types import (
+    ColumnSchema,
+    DatabaseSchema,
+    DatabaseSemanticAnnotation,
+    TableSchema,
+    TableSemanticAnnotation,
+)
 
 
 def test_table_columns_to_string_formats_columns_with_description_placeholder():
@@ -19,6 +25,51 @@ def test_table_columns_to_string_formats_columns_with_description_placeholder():
 def test_database_requires_database_type():
     with pytest.raises(ValidationError):
         DatabaseSchema(name="example", table_schemas=[])
+
+
+def test_schema_semantic_annotations_default_to_none():
+    database_schema = DatabaseSchema(
+        name="example",
+        database_type="DuckDB",
+        table_schemas=[
+            TableSchema(
+                name="users",
+                column_schemas=[
+                    ColumnSchema(name="id", data_type="INTEGER"),
+                ],
+            )
+        ],
+    )
+
+    assert database_schema.semantic_annotation is None
+    assert database_schema.table_schemas[0].semantic_annotation is None
+
+
+def test_schema_semantic_annotations_can_be_set():
+    database_schema = DatabaseSchema(
+        name="example",
+        database_type="DuckDB",
+        semantic_annotation=DatabaseSemanticAnnotation(
+            database_structure="Customer database.",
+            query_specific_content_analysis="Users table answers the question.",
+        ),
+        table_schemas=[
+            TableSchema(
+                name="users",
+                semantic_annotation=TableSemanticAnnotation(
+                    function="Target table."
+                ),
+                column_schemas=[
+                    ColumnSchema(name="id", data_type="INTEGER"),
+                ],
+            )
+        ],
+    )
+
+    assert database_schema.semantic_annotation is not None
+    assert database_schema.semantic_annotation.database_structure == "Customer database."
+    assert database_schema.table_schemas[0].semantic_annotation is not None
+    assert database_schema.table_schemas[0].semantic_annotation.function == "Target table."
 
 
 def test_database_subtract_removes_matching_tables_and_columns():

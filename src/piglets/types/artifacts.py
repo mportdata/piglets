@@ -3,6 +3,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from .database import DatabaseSchema
+from .linking import SemanticLinkingResult
 
 
 class Question(BaseModel):
@@ -19,6 +20,10 @@ class SearchSpace(BaseModel):
     database_schema: DatabaseSchema | None = Field(
         default=None,
         description="The database schema currently available to the workflow.",
+    )
+    semantic_linking_result: SemanticLinkingResult | None = Field(
+        default=None,
+        description="Raw semantic linking output used to enrich the search space.",
     )
 
 
