@@ -1,16 +1,16 @@
-from piglets.semantic_linking import SemanticLinker
+from piglets import SemanticLinker
 
 def test_semantic_linking(
         model_name,
         question,
-        logical_plan,
+        hypothesis,
         duckdb_search_space,
     ):
     linker = SemanticLinker(model_name=model_name)
     linking_result = linker.link(
         question=question,
         search_space=duckdb_search_space,
-        logical_plan=logical_plan,
+        hypothesis=hypothesis,
     )
     
     assert linking_result is not None

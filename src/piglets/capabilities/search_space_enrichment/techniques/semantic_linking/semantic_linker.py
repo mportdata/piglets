@@ -2,11 +2,13 @@ from langchain.chat_models import init_chat_model
 
 from piglets.policies import SemanticRules
 from piglets.types import (
-    AggregatePlan,
-    LogicalPlan,
+    DatabaseSemanticAnnotation,
+    Hypothesis,
     Question,
     SearchSpace,
     SemanticLinkingResult,
+    TableSemanticAnnotation,
+    WorkflowState,
 )
 
 
@@ -14,6 +16,12 @@ def _database_schema_from_search_space(search_space: SearchSpace):
     if search_space.database_schema is None:
         raise ValueError("search_space must contain a database_schema")
     return search_space.database_schema
+
+
+def _hypothesis_prompt_context(hypothesis: Hypothesis | None = None) -> str:
+    if hypothesis is None:
+        return ""
+    return f"*** HYPOTHESIS ***\n{hypothesis.content}"
 
 class SemanticLinker:
     def __init__(
@@ -25,15 +33,58 @@ class SemanticLinker:
         self.model_name = model_name
         self.model_provider = model_provider
         self.rules = rules or SemanticRules()
+
+    def enrich(self, state: WorkflowState) -> WorkflowState:
+        semantic_linking_result = self.link(
+            question=state.question,
+            search_space=state.search_space,
+            hypothesis=state.hypothesis,
+        )
+        database_schema = _database_schema_from_search_space(state.search_space)
+        table_functions = {
+            table_name.lower(): function
+            for table_name, function in semantic_linking_result.table_functions.items()
+        }
+        enriched_table_schemas = [
+            table_schema.model_copy(
+                update={
+                    "semantic_annotation": TableSemanticAnnotation(
+                        function=table_functions[table_schema.name.lower()]
+                    )
+                },
+            )
+            if table_schema.name.lower() in table_functions
+            else table_schema.model_copy()
+            for table_schema in database_schema.table_schemas
+        ]
+        enriched_database_schema = database_schema.model_copy(
+            update={
+                "semantic_annotation": DatabaseSemanticAnnotation(
+                    database_structure=semantic_linking_result.database_structure,
+                    query_specific_content_analysis=(
+                        semantic_linking_result.query_specific_content_analysis
+                    ),
+                ),
+                "table_schemas": enriched_table_schemas,
+            }
+        )
+        enriched_search_space = state.search_space.model_copy(
+            update={
+                "database_schema": enriched_database_schema,
+                "semantic_linking_result": semantic_linking_result,
+            }
+        )
+        return state.model_copy(update={"search_space": enriched_search_space})
     
     def link(
         self,
         question: Question,
         search_space: SearchSpace,
-        logical_plan: LogicalPlan | AggregatePlan = None,
+        hypothesis: Hypothesis | None = None,
     ) -> SemanticLinkingResult:
         natural_language_question = question.natural_language_question
         database_schema = _database_schema_from_search_space(search_space)
+        hypothesis_context = _hypothesis_prompt_context(hypothesis)
     
         llm = init_chat_model(model=self.model_name, model_provider=self.model_provider)
         llm = llm.with_structured_output(
@@ -51,8 +102,7 @@ class SemanticLinker:
             {critical_rules}
             *** USER QUESTION ***
             {natural_language_question}
-            *** Logical Plan ***
-            {logical_plan}
+            {hypothesis_context}
             *** DATABASE SCHEMA ***
             {database_schema.export_as_string()}
             *** YOUR TASKS ***

@@ -1,6 +1,28 @@
 from pydantic import BaseModel, Field
 
 
+class DatabaseSemanticAnnotation(BaseModel):
+    """Query-specific semantic annotation for a database schema."""
+
+    database_structure: str | None = Field(
+        default=None,
+        description="Semantic overview of the database structure for the current query.",
+    )
+    query_specific_content_analysis: str | None = Field(
+        default=None,
+        description="Query-specific analysis of how database content maps to user intent.",
+    )
+
+
+class TableSemanticAnnotation(BaseModel):
+    """Query-specific semantic annotation for a table schema."""
+
+    function: str | None = Field(
+        default=None,
+        description="Functional role of the table for the current query.",
+    )
+
+
 class ColumnSchema(BaseModel):
     """The schema of a database column, including its name and data type."""
 
@@ -13,6 +35,10 @@ class TableSchema(BaseModel):
     name: str = Field(description="The name of the table.")
     column_schemas: list[ColumnSchema] = Field(
         description="The list of column schemas in the table."
+    )
+    semantic_annotation: TableSemanticAnnotation | None = Field(
+        default=None,
+        description="Query-specific semantic annotation for the table.",
     )
 
     def columns_to_string(self) -> str:
@@ -29,6 +55,10 @@ class DatabaseSchema(BaseModel):
     database_type: str = Field(description="The SQL database type or dialect.")
     table_schemas: list[TableSchema] = Field(
         description="The list of table schemas in the database."
+    )
+    semantic_annotation: DatabaseSemanticAnnotation | None = Field(
+        default=None,
+        description="Query-specific semantic annotation for the database.",
     )
 
     def subtract(self, database_schema_to_subtract: "DatabaseSchema") -> "DatabaseSchema":
@@ -56,12 +86,14 @@ class DatabaseSchema(BaseModel):
                         TableSchema(
                             name=table_schema.name,
                             column_schemas=remaining_column_schemas,
+                            semantic_annotation=table_schema.semantic_annotation,
                         )
                     )
         return DatabaseSchema(
             name=self.name,
             database_type=self.database_type,
             table_schemas=remaining_table_schemas,
+            semantic_annotation=self.semantic_annotation,
         )
 
     def union(self, other_database_schema: "DatabaseSchema") -> "DatabaseSchema":
@@ -93,6 +125,7 @@ class DatabaseSchema(BaseModel):
                 TableSchema(
                     name=table_schema.name,
                     column_schemas=union_column_schemas,
+                    semantic_annotation=table_schema.semantic_annotation,
                 )
             )
 
@@ -106,6 +139,7 @@ class DatabaseSchema(BaseModel):
             name=self.name,
             database_type=self.database_type,
             table_schemas=union_table_schemas,
+            semantic_annotation=self.semantic_annotation,
         )
 
     def export_as_string(self) -> str:

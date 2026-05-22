@@ -10,6 +10,10 @@ from .capabilities.hypothesis_generation import (
     HypothesisGenerator as HypothesisGenerator,
     LogicalPlanner as LogicalPlanner,
 )
+from .capabilities.search_space_enrichment import (
+    SearchSpaceEnricher as SearchSpaceEnricher,
+    SemanticLinker as SemanticLinker,
+)
 from .capabilities.search_space_reduction import (
     DualPathwayPruner as DualPathwayPruner,
     SearchSpaceReducer as SearchSpaceReducer,
@@ -17,9 +21,9 @@ from .capabilities.search_space_reduction import (
 from .policies import RuleMode as RuleMode
 from .policies import SemanticRules as SemanticRules
 from .profiling import Profiler as Profiler
-from .semantic_linking import SemanticLinker as SemanticLinker
 from .synthesizing import Synthesizer as Synthesizer
 from .workflows import (
+    EnrichSearchSpace as EnrichSearchSpace,
     GenerateHypothesis as GenerateHypothesis,
     LoadSearchSpace as LoadSearchSpace,
     ReduceSearchSpace as ReduceSearchSpace,
@@ -29,6 +33,7 @@ from .workflows import (
 from .types import (
     AggregatePlan as AggregatePlan,
     ColumnSchema as ColumnSchema,
+    DatabaseSemanticAnnotation as DatabaseSemanticAnnotation,
     DatabaseSchema as DatabaseSchema,
     DatabaseProfileResult as DatabaseProfileResult,
     DeletionColumns as DeletionColumns,
@@ -57,6 +62,7 @@ from .types import (
     SynthesisRunResult as SynthesisRunResult,
     TableProfileColumnResult as TableProfileColumnResult,
     TableProfileResult as TableProfileResult,
+    TableSemanticAnnotation as TableSemanticAnnotation,
     TableSchema as TableSchema,
     WorkflowState as WorkflowState,
 )
@@ -76,10 +82,13 @@ __all__ = [
     # Planning
     "HypothesisGenerator",
     "LogicalPlanner",
+    # Search space enrichment
+    "EnrichSearchSpace",
+    "SearchSpaceEnricher",
+    "SemanticLinker",
     # Search space reduction
     "DualPathwayPruner",
     "SearchSpaceReducer",
-    "SemanticLinker",
     "RuleMode",
     "SemanticRules",
     "GenerateHypothesis",
@@ -90,6 +99,7 @@ __all__ = [
     # Types
     "AggregatePlan",
     "ColumnSchema",
+    "DatabaseSemanticAnnotation",
     "DatabaseSchema",
     "DatabaseProfileResult",
     "DeletionColumns",
@@ -116,6 +126,7 @@ __all__ = [
     "SynthesisRunResult",
     "TableProfileColumnResult",
     "TableProfileResult",
+    "TableSemanticAnnotation",
     "TableSchema",
     "WorkflowState",
     # Profiling

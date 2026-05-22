@@ -1,6 +1,7 @@
 from piglets import (
     ColumnSchema,
     DatabaseSchema,
+    EnrichSearchSpace,
     GenerateHypothesis,
     Hypothesis,
     LoadSearchSpace,
@@ -13,6 +14,7 @@ from piglets import (
     WorkflowStage,
 )
 from piglets.workflows import (
+    EnrichSearchSpace as WorkflowEnrichSearchSpace,
     GenerateHypothesis as WorkflowGenerateHypothesis,
     LoadSearchSpace as WorkflowLoadSearchSpace,
     ReduceSearchSpace as WorkflowReduceSearchSpace,
@@ -63,6 +65,25 @@ class FakeHypothesisGenerator:
         )
 
 
+class FakeSearchSpaceEnricher:
+    def __init__(self):
+        self.states = []
+
+    def enrich(self, state: WorkflowState) -> WorkflowState:
+        self.states.append(state)
+        return state.model_copy(
+            update={
+                "search_space": SearchSpace(
+                    database_schema=DatabaseSchema(
+                        name="enriched",
+                        database_type="DuckDB",
+                        table_schemas=[],
+                    )
+                )
+            }
+        )
+
+
 class FakeSearchSpaceReducer:
     def __init__(self):
         self.states = []
@@ -97,6 +118,7 @@ def test_workflow_imports_are_exported():
     assert WorkflowStage is WorkflowWorkflowStage
     assert LoadSearchSpace is WorkflowLoadSearchSpace
     assert GenerateHypothesis is WorkflowGenerateHypothesis
+    assert EnrichSearchSpace is WorkflowEnrichSearchSpace
     assert ReduceSearchSpace is WorkflowReduceSearchSpace
 
 
@@ -128,6 +150,26 @@ def test_generate_hypothesis_stage_adds_hypothesis_to_state():
     assert updated_state.hypothesis.content == "Count rows in the piglets table."
     assert updated_state.hypothesis.technique == "fake_generation"
     assert state.hypothesis is None
+
+
+def test_enrich_search_space_stage_updates_state_search_space():
+    enricher = FakeSearchSpaceEnricher()
+    state = WorkflowState(
+        question=_question(),
+        search_space=SearchSpace(database_schema=_database_schema()),
+    )
+
+    updated_state = EnrichSearchSpace(enricher).run(state)
+
+    assert updated_state is not state
+    assert enricher.states == [state]
+    assert updated_state.question == state.question
+    assert updated_state.search_space.database_schema == DatabaseSchema(
+        name="enriched",
+        database_type="DuckDB",
+        table_schemas=[],
+    )
+    assert state.search_space.database_schema == _database_schema()
 
 
 def test_reduce_search_space_stage_updates_state_search_space():

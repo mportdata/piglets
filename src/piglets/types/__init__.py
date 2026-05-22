@@ -15,7 +15,9 @@ from .linking import (
 )
 from .database import (
     ColumnSchema as ColumnSchema,
+    DatabaseSemanticAnnotation as DatabaseSemanticAnnotation,
     DatabaseSchema as DatabaseSchema,
+    TableSemanticAnnotation as TableSemanticAnnotation,
     TableSchema as TableSchema,
 )
 from .pruning import (
@@ -60,7 +62,9 @@ __all__ = [
     "SemanticLinkingResult",
     # database types
     "ColumnSchema",
+    "DatabaseSemanticAnnotation",
     "DatabaseSchema",
+    "TableSemanticAnnotation",
     "TableSchema",
     # pruning types
     "DeletionColumns",
