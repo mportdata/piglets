@@ -34,7 +34,7 @@ class SemanticLinker:
         self.model_provider = model_provider
         self.rules = rules or SemanticRules()
 
-    def enrich(self, state: WorkflowState) -> WorkflowState:
+    def ground(self, state: WorkflowState) -> WorkflowState:
         semantic_linking_result = self.link(
             question=state.question,
             search_space=state.search_space,

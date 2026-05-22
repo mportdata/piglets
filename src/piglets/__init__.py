@@ -10,23 +10,32 @@ from .capabilities.hypothesis_generation import (
     HypothesisGenerator as HypothesisGenerator,
     LogicalPlanner as LogicalPlanner,
 )
-from .capabilities.search_space_enrichment import (
-    SearchSpaceEnricher as SearchSpaceEnricher,
+from .capabilities.search_space_finalization import (
+    GlobalSynthesizer as GlobalSynthesizer,
+    SearchSpaceFinalizer as SearchSpaceFinalizer,
+)
+from .capabilities.search_space_grounding import (
+    SearchSpaceGrounder as SearchSpaceGrounder,
     SemanticLinker as SemanticLinker,
 )
 from .capabilities.search_space_reduction import (
     DualPathwayPruner as DualPathwayPruner,
     SearchSpaceReducer as SearchSpaceReducer,
 )
+from .capabilities.search_space_verification import (
+    ParallelDataProfiler as ParallelDataProfiler,
+    SearchSpaceVerifier as SearchSpaceVerifier,
+)
 from .policies import RuleMode as RuleMode
 from .policies import SemanticRules as SemanticRules
-from .profiling import Profiler as Profiler
-from .synthesizing import Synthesizer as Synthesizer
 from .workflows import (
-    EnrichSearchSpace as EnrichSearchSpace,
+    EnterUserQuestion as EnterUserQuestion,
+    FinalizeSearchSpace as FinalizeSearchSpace,
     GenerateHypothesis as GenerateHypothesis,
+    GroundSearchSpace as GroundSearchSpace,
     LoadSearchSpace as LoadSearchSpace,
     ReduceSearchSpace as ReduceSearchSpace,
+    VerifySearchSpace as VerifySearchSpace,
     WorkflowRunner as WorkflowRunner,
     WorkflowStage as WorkflowStage,
 )
@@ -82,13 +91,22 @@ __all__ = [
     # Planning
     "HypothesisGenerator",
     "LogicalPlanner",
-    # Search space enrichment
-    "EnrichSearchSpace",
-    "SearchSpaceEnricher",
+    # Search space grounding
+    "GroundSearchSpace",
+    "SearchSpaceGrounder",
     "SemanticLinker",
     # Search space reduction
     "DualPathwayPruner",
     "SearchSpaceReducer",
+    # Search space verification
+    "ParallelDataProfiler",
+    "SearchSpaceVerifier",
+    "VerifySearchSpace",
+    # Search space finalization
+    "EnterUserQuestion",
+    "FinalizeSearchSpace",
+    "GlobalSynthesizer",
+    "SearchSpaceFinalizer",
     "RuleMode",
     "SemanticRules",
     "GenerateHypothesis",
@@ -130,11 +148,8 @@ __all__ = [
     "TableSchema",
     "WorkflowState",
     # Profiling
-    "Profiler",
     "ProfilingQuery",
     "ProfilingQueries",
-    # Synthesizing
-    "Synthesizer"
 ]
 
 

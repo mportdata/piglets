@@ -4,23 +4,23 @@ import pytest
 
 from piglets import (
     DatabaseProfileResult,
-    Profiler,
+    ParallelDataProfiler,
     SearchSpace,
-    Synthesizer,
+    GlobalSynthesizer,
 )
 
 
 @pytest.fixture
-def profiler(model_name, pruned_duckdb_database_schema) -> Profiler:
-    return Profiler(
+def profiler(model_name, pruned_duckdb_database_schema) -> ParallelDataProfiler:
+    return ParallelDataProfiler(
         model_name=model_name,
         search_space=SearchSpace(database_schema=pruned_duckdb_database_schema),
     )
 
 
 @pytest.fixture
-def synthesizer(model_name, pruned_duckdb_database_schema, duckdb_connector) -> Synthesizer:
-    return Synthesizer(
+def synthesizer(model_name, pruned_duckdb_database_schema, duckdb_connector) -> GlobalSynthesizer:
+    return GlobalSynthesizer(
         search_space=SearchSpace(database_schema=pruned_duckdb_database_schema),
         database_connector=duckdb_connector,
         model_name=model_name,

@@ -4,14 +4,14 @@ from piglets import (
     Hypothesis,
     Question,
     SearchSpace,
-    SearchSpaceEnricher,
+    SearchSpaceGrounder,
     SemanticLinker,
     SemanticLinkingResult,
     TableSchema,
     WorkflowState,
 )
-from piglets.capabilities.search_space_enrichment import (
-    SearchSpaceEnricher as CapabilitySearchSpaceEnricher,
+from piglets.capabilities.search_space_grounding import (
+    SearchSpaceGrounder as CapabilitySearchSpaceGrounder,
     SemanticLinker as CapabilitySemanticLinker,
 )
 
@@ -68,16 +68,16 @@ class FakeSemanticLinker(SemanticLinker):
         )
 
 
-def test_search_space_enrichment_imports_are_exported():
+def test_search_space_grounding_imports_are_exported():
     assert SemanticLinker is CapabilitySemanticLinker
-    assert SearchSpaceEnricher is CapabilitySearchSpaceEnricher
+    assert SearchSpaceGrounder is CapabilitySearchSpaceGrounder
 
 
-def test_semantic_linker_matches_search_space_enricher_protocol():
-    assert isinstance(FakeSemanticLinker(), SearchSpaceEnricher)
+def test_semantic_linker_matches_search_space_grounder_protocol():
+    assert isinstance(FakeSemanticLinker(), SearchSpaceGrounder)
 
 
-def test_semantic_linker_enrich_adds_schema_annotations_and_raw_result():
+def test_semantic_linker_ground_adds_schema_annotations_and_raw_result():
     question = _question()
     hypothesis = Hypothesis(
         question=question,
@@ -91,7 +91,7 @@ def test_semantic_linker_enrich_adds_schema_annotations_and_raw_result():
     )
     semantic_linker = FakeSemanticLinker()
 
-    updated_state = semantic_linker.enrich(state)
+    updated_state = semantic_linker.ground(state)
 
     assert updated_state is not state
     assert semantic_linker.calls == [

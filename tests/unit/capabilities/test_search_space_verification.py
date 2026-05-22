@@ -5,7 +5,7 @@ import time
 import pytest
 
 from piglets.policies import SemanticRules
-from piglets.profiling.profiler import Profiler
+from piglets.capabilities.search_space_verification.techniques.parallel_data_profiling.parallel_data_profiler import ParallelDataProfiler
 from piglets.types import (
     ColumnSchema,
     DatabaseSchema,
@@ -104,7 +104,7 @@ class FakeParallelConnector:
         )
 
 
-class FakeParallelProfiler(Profiler):
+class FakeParallelProfiler(ParallelDataProfiler):
     def __init__(self, database_schema):
         super().__init__(
             model_name="test-model",
@@ -196,11 +196,11 @@ def test_generate_table_profiler_queries_uses_structured_output_and_returns_prof
         return fake_llm
 
     monkeypatch.setattr(
-        "piglets.profiling.profiler.init_chat_model",
+        "piglets.capabilities.search_space_verification.techniques.parallel_data_profiling.parallel_data_profiler.init_chat_model",
         fake_init_chat_model,
     )
 
-    profiler = Profiler(
+    profiler = ParallelDataProfiler(
         model_name="test-model",
         search_space=_search_space(),
         model_provider="test-provider",
@@ -223,11 +223,11 @@ def test_generate_table_profiler_queries_prompt_uses_critical_rules_and_single_t
     fake_llm = FakeProfilingLLM()
 
     monkeypatch.setattr(
-        "piglets.profiling.profiler.init_chat_model",
+        "piglets.capabilities.search_space_verification.techniques.parallel_data_profiling.parallel_data_profiler.init_chat_model",
         lambda model, model_provider=None: fake_llm,
     )
 
-    profiler = Profiler(
+    profiler = ParallelDataProfiler(
         model_name="test-model",
         search_space=_search_space(),
         rules=SemanticRules(),
@@ -257,7 +257,7 @@ def test_generate_table_profiler_queries_prompt_uses_case_insensitive_table_func
     fake_llm = FakeProfilingLLM()
 
     monkeypatch.setattr(
-        "piglets.profiling.profiler.init_chat_model",
+        "piglets.capabilities.search_space_verification.techniques.parallel_data_profiling.parallel_data_profiler.init_chat_model",
         lambda model, model_provider=None: fake_llm,
     )
 
@@ -267,7 +267,7 @@ def test_generate_table_profiler_queries_prompt_uses_case_insensitive_table_func
             ColumnSchema(name="status", data_type="VARCHAR"),
         ],
     )
-    profiler = Profiler(model_name="test-model", search_space=_search_space(table))
+    profiler = ParallelDataProfiler(model_name="test-model", search_space=_search_space(table))
     profiler._generate_table_profiler_queries(
         question=_question(),
         table_schema=table,
@@ -281,11 +281,11 @@ def test_generate_table_profiler_queries_uses_unknown_role_without_semantic_link
     fake_llm = FakeProfilingLLM()
 
     monkeypatch.setattr(
-        "piglets.profiling.profiler.init_chat_model",
+        "piglets.capabilities.search_space_verification.techniques.parallel_data_profiling.parallel_data_profiler.init_chat_model",
         lambda model, model_provider=None: fake_llm,
     )
 
-    profiler = Profiler(model_name="test-model", search_space=_search_space())
+    profiler = ParallelDataProfiler(model_name="test-model", search_space=_search_space())
     profiling_queries = profiler._generate_table_profiler_queries(
         question=_question(),
         table_schema=_table(),
@@ -302,11 +302,11 @@ def test_profile_table_can_be_called_without_semantic_linking(monkeypatch):
     fake_llm = FakeProfilingLLM()
 
     monkeypatch.setattr(
-        "piglets.profiling.profiler.init_chat_model",
+        "piglets.capabilities.search_space_verification.techniques.parallel_data_profiling.parallel_data_profiler.init_chat_model",
         lambda model, model_provider=None: fake_llm,
     )
 
-    profiler = Profiler(model_name="test-model", search_space=_search_space())
+    profiler = ParallelDataProfiler(model_name="test-model", search_space=_search_space())
     profiling_queries = profiler._generate_table_profiler_queries(
         question=_question(),
         table_schema=_table(),
@@ -320,11 +320,11 @@ def test_profile_table_from_query_results_uses_structured_output_and_evidence(mo
     fake_llm = FakeProfilingLLM()
 
     monkeypatch.setattr(
-        "piglets.profiling.profiler.init_chat_model",
+        "piglets.capabilities.search_space_verification.techniques.parallel_data_profiling.parallel_data_profiler.init_chat_model",
         lambda model, model_provider=None: fake_llm,
     )
 
-    profiler = Profiler(model_name="test-model", search_space=_search_space())
+    profiler = ParallelDataProfiler(model_name="test-model", search_space=_search_space())
     query_results = QueryResults(
         query_results=[
             QueryResult(
@@ -356,8 +356,8 @@ def test_profile_table_from_query_results_uses_structured_output_and_evidence(mo
 
 
 def test_execute_table_profiling_queries_runs_queries_in_parallel_and_preserves_order(caplog):
-    caplog.set_level(logging.DEBUG, logger="piglets.profiling.profiler")
-    profiler = Profiler(model_name="test-model", search_space=_search_space())
+    caplog.set_level(logging.DEBUG, logger="piglets.capabilities.search_space_verification.techniques.parallel_data_profiling.parallel_data_profiler")
+    profiler = ParallelDataProfiler(model_name="test-model", search_space=_search_space())
     profiling_queries = ProfilingQueries(
         query=[
             ProfilingQuery(motivation="First query.", query="SELECT 1"),
@@ -390,10 +390,10 @@ def test_execute_table_profiling_queries_runs_queries_in_parallel_and_preserves_
 def test_execute_table_profiling_queries_repairs_failed_query_and_preserves_order(monkeypatch):
     fake_llm = FakeProfilingLLM()
     monkeypatch.setattr(
-        "piglets.profiling.profiler.init_chat_model",
+        "piglets.capabilities.search_space_verification.techniques.parallel_data_profiling.parallel_data_profiler.init_chat_model",
         lambda model, model_provider=None: fake_llm,
     )
-    profiler = Profiler(model_name="test-model", search_space=_search_space())
+    profiler = ParallelDataProfiler(model_name="test-model", search_space=_search_space())
     connector = FakeRepairConnector(
         failures_by_query={
             "SELECT broken": [ValueError("Binder Error: invalid column")],
@@ -431,10 +431,10 @@ def test_execute_table_profiling_queries_repairs_failed_query_and_preserves_orde
 def test_repair_profiling_query_prompt_contains_failed_query_context(monkeypatch):
     fake_llm = FakeProfilingLLM()
     monkeypatch.setattr(
-        "piglets.profiling.profiler.init_chat_model",
+        "piglets.capabilities.search_space_verification.techniques.parallel_data_profiling.parallel_data_profiler.init_chat_model",
         lambda model, model_provider=None: fake_llm,
     )
-    profiler = Profiler(model_name="test-model", search_space=_search_space())
+    profiler = ParallelDataProfiler(model_name="test-model", search_space=_search_space())
     connector = FakeRepairConnector(
         failures_by_query={
             "SELECT broken": [ValueError("Binder Error: invalid column")],
@@ -472,10 +472,10 @@ def test_repair_profiling_query_prompt_contains_failed_query_context(monkeypatch
 def test_execute_table_profiling_queries_raises_after_repair_attempts_exhausted(monkeypatch):
     fake_llm = FakeProfilingLLM()
     monkeypatch.setattr(
-        "piglets.profiling.profiler.init_chat_model",
+        "piglets.capabilities.search_space_verification.techniques.parallel_data_profiling.parallel_data_profiler.init_chat_model",
         lambda model, model_provider=None: fake_llm,
     )
-    profiler = Profiler(
+    profiler = ParallelDataProfiler(
         model_name="test-model",
         search_space=_search_space(),
         max_query_repair_attempts=1,
@@ -518,10 +518,10 @@ def test_execute_table_profiling_queries_does_not_repair_when_disabled(monkeypat
         return FakeProfilingLLM()
 
     monkeypatch.setattr(
-        "piglets.profiling.profiler.init_chat_model",
+        "piglets.capabilities.search_space_verification.techniques.parallel_data_profiling.parallel_data_profiler.init_chat_model",
         fake_init_chat_model,
     )
-    profiler = Profiler(
+    profiler = ParallelDataProfiler(
         model_name="test-model",
         search_space=_search_space(),
         max_query_repair_attempts=0,
@@ -551,7 +551,7 @@ def test_execute_table_profiling_queries_does_not_repair_when_disabled(monkeypat
 
 
 def test_profile_database_profiles_tables_in_parallel_and_preserves_order(caplog):
-    caplog.set_level(logging.DEBUG, logger="piglets.profiling.profiler")
+    caplog.set_level(logging.DEBUG, logger="piglets.capabilities.search_space_verification.techniques.parallel_data_profiling.parallel_data_profiler")
     database = _two_table_database()
     profiler = FakeParallelProfiler(database)
 

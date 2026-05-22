@@ -16,6 +16,7 @@ from piglets.types import (
     SemanticLinkingResult,
     TableSchema,
     TableProfileResult,
+    WorkflowState,
 )
 
 logger = logging.getLogger(__name__)
@@ -27,11 +28,12 @@ def _database_schema_from_search_space(search_space: SearchSpace):
     return search_space.database_schema
 
 
-class Profiler():
+class ParallelDataProfiler:
     def __init__(
         self,
         model_name: str,
-        search_space: SearchSpace,
+        database_connector: DatabaseConnector | None = None,
+        search_space: SearchSpace | None = None,
         model_provider: str = None,
         rules: SemanticRules | None = None,
         max_query_repair_attempts: int = 1,
@@ -42,6 +44,7 @@ class Profiler():
             )
 
         self.model_name = model_name
+        self.database_connector = database_connector
         self.search_space = search_space
         self.model_provider = model_provider
         self.rules = rules or SemanticRules()
@@ -49,7 +52,25 @@ class Profiler():
 
     @property
     def database_schema(self):
+        if self.search_space is None:
+            raise ValueError("search_space must be set before profiling")
         return _database_schema_from_search_space(self.search_space)
+
+    def verify(self, state: WorkflowState) -> WorkflowState:
+        """Verify the current search space by profiling table content."""
+        if self.database_connector is None:
+            raise ValueError("database_connector must be set before verification")
+
+        database_profile_result = self.profile_database(
+            search_space=state.search_space,
+            database_connector=self.database_connector,
+            question=state.question,
+            semantic_linking_result=state.search_space.semantic_linking_result,
+        )
+        verified_search_space = state.search_space.model_copy(
+            update={"database_profile_result": database_profile_result}
+        )
+        return state.model_copy(update={"search_space": verified_search_space})
 
     def _generate_table_profiler_queries(
         self,
@@ -401,10 +422,16 @@ class Profiler():
     def profile_database(
         self,
         search_space: SearchSpace,
-        database_connector: DatabaseConnector,
+        database_connector: DatabaseConnector | None,
         question: Question,
         semantic_linking_result: SemanticLinkingResult | None = None
     ) -> DatabaseProfileResult:
+        if database_connector is None:
+            if self.database_connector is None:
+                raise ValueError("database_connector must be provided")
+            database_connector = self.database_connector
+
+        self.search_space = search_space
         database_schema = _database_schema_from_search_space(search_space)
         logger.info(
             "Profiling database %s with %s tables",
