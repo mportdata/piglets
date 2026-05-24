@@ -360,19 +360,49 @@ def test_workflow_runner_can_start_from_existing_state():
     assert state.question == question
 
 
+def test_workflow_runner_accepts_question_directly():
+    calls = []
+    runner = WorkflowRunner(stages=[RecordingStage("first", calls)])
+
+    state = runner.run(question="count piglets")
+
+    assert calls == ["first"]
+    assert state.question == _question()
+
+
+def test_workflow_runner_preserves_matching_state_question():
+    calls = []
+    question = _question()
+    initial_state = WorkflowState(question=question)
+    runner = WorkflowRunner(stages=[RecordingStage("first", calls)])
+
+    state = runner.run(initial_state, question=question)
+
+    assert calls == ["first"]
+    assert state == initial_state
+    assert state.question == question
+
+
+def test_workflow_runner_rejects_conflicting_question():
+    runner = WorkflowRunner(stages=[])
+    state = WorkflowState(question=Question(natural_language_question="other"))
+
+    with pytest.raises(ValueError, match="differs from the provided question"):
+        runner.run(state, question="count piglets")
+
+
 def test_workflow_runner_loads_search_space_and_generates_hypothesis():
     connector = FakeDatabaseConnector()
     generator = FakeHypothesisGenerator()
     question = _question()
     runner = WorkflowRunner(
         stages=[
-            EnterUserQuestion(question),
             LoadSearchSpace(connector),
             GenerateHypothesis(generator),
         ]
     )
 
-    state = runner.run()
+    state = runner.run(question=question)
 
     assert state.question == question
     assert state.search_space.database_schema == _database_schema()
@@ -388,14 +418,13 @@ def test_workflow_runner_loads_generates_hypothesis_and_reduces_search_space():
     question = _question()
     runner = WorkflowRunner(
         stages=[
-            EnterUserQuestion(question),
             LoadSearchSpace(connector),
             GenerateHypothesis(generator),
             ReduceSearchSpace(reducer),
         ]
     )
 
-    state = runner.run()
+    state = runner.run(question=question)
 
     assert reducer.states[0].search_space.database_schema == _database_schema()
     assert reducer.states[0].hypothesis is not None
